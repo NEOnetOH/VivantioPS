@@ -1,17 +1,4 @@
-﻿<#
-	.NOTES
-	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2020 v5.7.172
-	 Created on:   	3/26/2020 14:24
-	 Created by:   	Claussen
-	 Organization: 	NEOnet
-	 Filename:     	InvokeVivantioRequest.ps1
-	===========================================================================
-	.DESCRIPTION
-		A description of the file.
-#>
-
-
+﻿
 function InvokeVivantioRequest {
     [CmdletBinding()]
     param
@@ -19,10 +6,9 @@ function InvokeVivantioRequest {
         [Parameter(Mandatory = $true)]
         [System.UriBuilder]$URI,
 
-        [Hashtable]$Headers = @{
-        },
+        [Hashtable]$Headers = @{},
 
-        [pscustomobject]$Body = $null,
+        [pscustomobject]$Body,
 
         [ValidateRange(1, 65535)]
         [uint16]$Timeout = (Get-VivantioTimeout),
@@ -33,28 +19,29 @@ function InvokeVivantioRequest {
         [switch]$Raw
     )
 
-    $creds = Get-VivantioCredential
-
-    $Headers.Authorization = "Token {0}" -f $creds.GetNetworkCredential().Password
+    $Headers['Authorization'] = GetHTTPBasicAuthorizationString -Credential (Get-VivantioCredential)
 
     $splat = @{
         'Method'      = $Method
         'Uri'         = $URI.Uri.AbsoluteUri # This property auto generates the scheme, hostname, path, and query
         'Headers'     = $Headers
         'TimeoutSec'  = $Timeout
-        'ContentType' = 'application/json'
         'ErrorAction' = 'Stop'
         'Verbose'     = $VerbosePreference
     }
 
-    $splat += Get-VivantioInvokeParams
-
-    if ($Body) {
+    if ($PSBoundParameters.ContainsKey('Body')) {
         Write-Verbose "BODY: $($Body | ConvertTo-Json -Compress)"
-        $null = $splat.Add('Body', ($Body | ConvertTo-Json -Compress))
+        $splat['Body'] = ($Body | ConvertTo-Json -Compress)
+        $splat['ContentType'] = 'application/json'
     }
-
-    $result = Invoke-RestMethod @splat
+    
+    try {
+        Write-Verbose "Calling URI: $($URI.Uri.AbsoluteUri)"
+        $result = Invoke-RestMethod @splat
+    } catch {
+        throw $_
+    }
 
     #region TODO: Handle errors a little more gracefully...
 
@@ -96,11 +83,14 @@ function InvokeVivantioRequest {
         Write-Verbose "Returning raw result by choice"
         return $result
     } else {
-        if ($result.psobject.Properties.Name.Contains('results')) {
-            Write-Verbose "Found Results property on data, returning results directly"
-            return $result.Results
+        if ($result.psobject.Properties.Name.Contains('Item')) {
+            Write-Verbose "Found 'Item' property on data, returning 'Item' directly"
+            return $result.Item
+        } elseif ($result.psobject.Properties.Name.Contains('value')) {
+            Write-Verbose "Found 'value' property on data, returning 'value' directly"
+            return $result.value
         } else {
-            Write-Verbose "Did NOT find results property on data, returning raw result"
+            Write-Verbose "Did NOT find 'item' or 'value' property on data, returning raw result"
             return $result
         }
     }

@@ -1,32 +1,35 @@
 <#
     .SYNOPSIS
         Concatenate files into single PSM1 and PSD1 files
-
+    
     .DESCRIPTION
         Concatenate all ps1 files in the Functions directory, plus the root PSM1,
         into a single PSM1 file in the VivantioPS directory.
-
+        
         By default, this script will increment version by 0.0.1
-
+    
     .PARAMETER SkipVersion
         Do not increment the version.
-
+    
     .PARAMETER VersionIncrease
         Increase the version by a user defined amount
-
+    
     .PARAMETER NewVersion
         Override the new version with this version
-
+    
+    .PARAMETER Environment
+        A description of the Environment parameter.
+    
     .EXAMPLE
         Use all defaults and concatenate all files
-
+        
         .\deploy.ps1
-
+    
     .EXAMPLE
         Increment the version by 0.2.0. Given version 1.2.0, the resulting version will be 1.4.0
-
+        
         .\deploy.ps1 -VersionIncrease 0.2.0
-
+    
     .NOTES
         ===========================================================================
         Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2020 v5.7.174
@@ -37,18 +40,19 @@
         ===========================================================================
 #>
 [CmdletBinding(DefaultParameterSetName = 'IncreaseVersion')]
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSReviewUnusedParameter", "")]
 param
 (
     [Parameter(ParameterSetName = 'SkipVersion')]
     [switch]$SkipVersion,
-
+    
     [Parameter(ParameterSetName = 'IncreaseVersion')]
     [version]$VersionIncrease = "0.0.1",
-
+    
     [Parameter(ParameterSetName = 'SetVersion')]
-    [version]$NewVersion
+    [version]$NewVersion,
+    
+    [ValidateSet('dev', 'development', 'prod', 'production', IgnoreCase = $true)]
+    [string]$Environment = 'development'
 )
 
 Import-Module "Microsoft.PowerShell.Utility" -ErrorAction Stop
@@ -129,6 +133,11 @@ if (Test-Path $StandalonePath) {
 
 Write-Host " Adding psm1"
 Get-Content "$PSScriptRoot\$ModuleName.psm1" | Out-File -FilePath $ConcatenatedFilePath -Encoding UTF8 -Append
+
+if ($Environment -ilike 'dev*') {
+    "## Exporting all functions for development ##" | Out-File -FilePath $ConcatenatedFilePath -Encoding utf8 -Append
+    "Export-ModuleMember -Function '*'" | Out-File -FilePath $ConcatenatedFilePath -Encoding utf8 -Append
+}
 
 $PSDManifest = Import-PowerShellDataFile -Path "$PSScriptRoot\$ModuleName.psd1"
 # Get the version from the PSD1

@@ -2,19 +2,6 @@
 
 #region File BuildNewURI.ps1
 
-<#
-	.NOTES
-	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2020 v5.7.172
-	 Created on:   	3/26/2020 14:22
-	 Created by:   	Claussen
-	 Organization: 	NEOnet
-	 Filename:     	BuildNewURI.ps1
-	===========================================================================
-	.DESCRIPTION
-		A description of the file.
-#>
-
 
 function BuildNewURI {
 <#
@@ -24,14 +11,14 @@ function BuildNewURI {
     .DESCRIPTION
         Internal function used to build a URIBuilder object.
     
+    .PARAMETER APIType
+        A description of the APIType parameter.
+    
     .PARAMETER Segments
         Array of strings for each segment in the URL path
     
     .PARAMETER Parameters
         Hashtable of query parameters to include
-    
-    .PARAMETER APIType
-        A description of the APIType parameter.
     
     .PARAMETER SkipConnectedCheck
         A description of the SkipConnectedCheck parameter.
@@ -59,14 +46,14 @@ function BuildNewURI {
     [OutputType([System.UriBuilder])]
     param
     (
+        [ValidateSet('API', 'OData', IgnoreCase = $true)]
+        [string]$APIType = 'API',
+        
         [Parameter(Mandatory = $false)]
         [string[]]$Segments,
         
         [Parameter(Mandatory = $false)]
         [hashtable]$Parameters,
-        
-        [ValidateSet('API', 'OData', IgnoreCase = $true)]
-        [string]$APIType = 'API',
         
         [switch]$SkipConnectedCheck
     )
@@ -78,15 +65,16 @@ function BuildNewURI {
         $null = CheckVivantioIsConnected
     }
     
-    # Begin a URI builder with HTTP/HTTPS and the provided hostname
+    # Create a new URIBuilder from our pre-configured URIs
+    # If you simply assign $script:VivantioPSConfig.URI.RPC, you will then directly modify the original
     $uriBuilder = if ($APIType -eq 'API') {
-        [System.UriBuilder]::new($script:VivantioConfig.HostScheme, $script:VivantioConfig.Hostname, $script:VivantioConfig.HostPort)
+        [System.UriBuilder]::new($script:VivantioPSConfig.URI.RPC.ToString())
     } else {
-        [System.UriBuilder]::new($script:VivantioConfig.HostSchemeOData, $script:VivantioConfig.HostnameOData, $script:VivantioConfig.HostPortOData)
+        [System.UriBuilder]::new($script:VivantioPSConfig.URI.OData.ToString())
     }
     
     # Generate the path by trimming excess slashes and whitespace from the $segments[] and joining together
-    $uriBuilder.Path = "{0}/{1}/" -f $APIType.ToLower(), ($Segments.ForEach({
+    $uriBuilder.Path = "{0}/{1}/" -f $uriBuilder.Path.TrimEnd('/'), ($Segments.ForEach({
                 $_.trim('/').trim()
             }) -join '/')
     
@@ -109,22 +97,12 @@ function BuildNewURI {
     $uriBuilder
 }
 
+
+
+
 #endregion
 
 #region File BuildURIComponents.ps1
-
-<#
-	.NOTES
-	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2020 v5.7.172
-	 Created on:   	3/26/2020 14:23
-	 Created by:   	Claussen
-	 Organization: 	NEOnet
-	 Filename:     	BuildURIComponents.ps1
-	===========================================================================
-	.DESCRIPTION
-		A description of the file.
-#>
 
 
 function BuildURIComponents {
@@ -249,121 +227,70 @@ function Clear-VivantioCredential {
 
 #region File Connect-VivantioAPI.ps1
 
+
 function Connect-VivantioAPI {
 <#
     .SYNOPSIS
         Connects to the Vivantio API and ensures Credential work properly
-
+    
     .DESCRIPTION
         Connects to the Vivantio API and ensures Credential work properly
-
-    .PARAMETER Hostname
-        The hostname for the resource such as Vivantio.domain.com
-
+    
     .PARAMETER Credential
         Credential object containing the API username and password
-
-    .PARAMETER Scheme
-        Scheme for the URI such as HTTP or HTTPS. Defaults is HTTPS
-
-    .PARAMETER Port
-        Port for the resource. Value between 1-65535. Default is 443
-
-    .PARAMETER URI
-        The full URI for the resource such as "https://Vivantio.domain.com:8443". This overrides the individual
-        Scheme, Hostname, and Port parameters.
-
-    .PARAMETER SkipCertificateCheck
-        Ignore invalid certificates.
-
+    
+    .PARAMETER ODataURI
+        URI for OData API
+    
+    .PARAMETER APIURI
+        URI for basic API
+    
     .PARAMETER TimeoutSeconds
         The number of seconds before the HTTP call times out. Defaults to 30 seconds
-
+    
     .EXAMPLE
         PS C:\> Connect-VivantioAPI -Hostname "Vivantio.domain.com"
-
+        
         This will prompt for Credential, then proceed to attempt a connection to Vivantio
-
+    
     .NOTES
         Additional information about the function.
 #>
-
+    
     [CmdletBinding()]
     param
     (
         [Parameter(Mandatory = $false)]
         [pscredential]$Credential,
-
-        [Parameter()]
+        
         [string]$ODataURI = 'https://neonet.vivantio.com/odata/',
         
-        [Parameter()]
         [string]$APIURI = 'https://webservices-na01.vivantio.com/api/',
         
-        [ValidateNotNullOrEmpty()]
         [ValidateRange(1, 65535)]
+        [ValidateNotNullOrEmpty()]
         [uint16]$TimeoutSeconds = 30
     )
-
+    
     if (-not $Credential) {
         try {
             $Credential = Get-VivantioCredential -ErrorAction Stop
         } catch {
             # Credentials are not set... Try to obtain from the user
             if (-not ($Credential = Get-Credential -Message "Enter credentials for Vivantio")) {
-                throw "Credentials are necessary to connect to a Vivantio API."
+                throw "Credentials are necessary to connect to a Vivantio OData/API"
             }
         }
     }
-#
-#    $invokeParams = @{ SkipCertificateCheck = $SkipCertificateCheck; }
-#
-#    if ("Desktop" -eq $PSVersionTable.PsEdition) {
-#        #Remove -SkipCertificateCheck from Invoke Parameter (not supported <= PS 5)
-#        $invokeParams.remove("SkipCertificateCheck")
-#    }
-#
-#    #for PowerShell (<=) 5 (Desktop), Enable TLS 1.1, 1.2 and Disable SSL chain trust
-#    if ("Desktop" -eq $PSVersionTable.PsEdition) {
-#        #Add System.web (Need for ParseQueryString)
-#        Add-Type -AssemblyName System.Web
-#        #Enable TLS 1.1 and 1.2
-#        Set-VivantioCipherSSL
-#        if ($SkipCertificateCheck) {
-#            #Disable SSL chain trust...
-#            Set-VivantiountrustedSSL
-#        }
-#    }
     
-    # Set OData variables
-    $uriBuilder = [System.UriBuilder]::new($ODataURI)
-    if ([string]::IsNullOrWhiteSpace($uriBuilder.Host) -or [string]::IsNullOrWhiteSpace($uriBuilder.Path)) {
-        throw "OData appears to be invalid. Must be in format [scheme://host.name/odata], or [scheme://host.name:port/odata]"
-    }
-    
-    $null = Set-VivantioHostName -Hostname $uriBuilder.Host -OData
-    $null = Set-VivantioHostScheme -Scheme $uriBuilder.Scheme -OData
-    $null = Set-VivantioHostPort -Port $uriBuilder.Port -OData
-    
-    # Set standard API variables
-    $uriBuilder = [System.UriBuilder]::new($APIURI)
-    if ([string]::IsNullOrWhiteSpace($uriBuilder.Host) -or [string]::IsNullOrWhiteSpace($uriBuilder.Path)) {
-        throw "API URI appears to be invalid. Must be in format [scheme://host.name/api], or [scheme://host.name:port/api]"
-    }
-    
-    $null = Set-VivantioHostName -Hostname $uriBuilder.Host
-    $null = Set-VivantioHostScheme -Scheme $uriBuilder.Scheme
-    $null = Set-VivantioHostPort -Port $uriBuilder.Port
-    
-    
-    
+    $null = Set-VivantioODataURI -URI $ODataURI
+    $null = Set-VivantioAPIURI -URI $APIURI
     $null = Set-VivantioCredential -Credential $Credential
-#    $null = Set-VivantioInvokeParams -invokeParams $invokeParams
     $null = Set-VivantioTimeout -TimeoutSeconds $TimeoutSeconds
-
+    
     try {
-        Write-Verbose "Verifying API connectivity..."
-        #$null = VerifyAPIConnectivity
+        $null = VerifyAPIConnectivity -ErrorAction Stop
+        $null = VerifyODataConnectivity -ErrorAction Stop
     } catch {
         Write-Verbose "Failed to connect. Generating error"
         Write-Verbose $_.Exception.Message
@@ -373,70 +300,88 @@ function Connect-VivantioAPI {
             throw $_
         }
     }
-        
+    
     $script:VivantioPSConfig.Connected = $true
     Write-Verbose "Successfully connected!"
-
+    
     Write-Verbose "Connection process completed"
 }
 
-#endregion
-
-#region File Get-VivantioAPIDefinition.ps1
-
-<#
-    .NOTES
-    ===========================================================================
-     Created with:     SAPIEN Technologies, Inc., PowerShell Studio 2020 v5.7.174
-     Created on:       4/28/2020 11:57
-     Created by:       Claussen
-     Organization:     NEOnet
-     Filename:         Get-VivantioAPIDefinition.ps1
-    ===========================================================================
-    .DESCRIPTION
-        A description of the file.
-#>
-
-
-
-function Get-VivantioAPIDefinition {
-    [CmdletBinding()]
-    param ()
-
-    #$URI = "https://Vivantio.neonet.org/api/docs/?format=openapi"
-
-    $Segments = [System.Collections.ArrayList]::new(@('docs'))
-
-    $URIComponents = BuildURIComponents -URISegments $Segments -ParametersDictionary @{'format' = 'openapi' }
-
-    $URI = BuildNewURI -Segments $URIComponents.Segments -Parameters $URIComponents.Parameters -SkipConnectedCheck
-
-    InvokeVivantioRequest -URI $URI
-}
 
 #endregion
 
-#region File Get-VivantioCallerById.ps1
+#region File Get-VivantioCallerByOData.ps1
 
-function Get-VivantioCallerById {
+
+function Get-VivantioCallerByOData {
     [CmdletBinding()]
+    [OutputType([pscustomobject])]
     param
     (
-        [Parameter()]
-        [uint32[]]$Id,
-
+        [string]$Filter,
+        
+        [uint16]$Skip,
+        
+        [switch]$All,
+        
         [switch]$Raw
     )
     
     $Segments = [System.Collections.ArrayList]::new(@('Callers'))
     
-    $URIComponents = BuildURIComponents -URISegments $Segments -ParametersDictionary $PSBoundParameters
+    $Parameters = @{}
     
-    $uri = BuildNewURI -Segments $URIComponents.Segments -Parameters $URIComponents.Parameters
+    if ($PSBoundParameters.ContainsKey('Filter')) {
+        $Parameters['$filter'] = $Filter.ToLower().TrimStart('$filter=')
+    }
     
-    InvokeNetboxRequest -URI $uri -Raw:$Raw
+    if ($PSBoundParameters.ContainsKey('Skip')) {
+        $Parameters['$skip'] = $Skip
+    }
     
-    break
+    $uri = BuildNewURI -APIType OData -Segments $Segments -Parameters $Parameters
+    
+#    $URIComponents = BuildURIComponents -URISegments $Segments -ParametersDictionary $PSBoundParameters
+#    $uri = BuildNewURI -Segments $URIComponents.Segments -Parameters $URIComponents.Parameters
+    
+    $RawData = InvokeVivantioRequest -URI $uri -Raw:$Raw
+    
+    $Callers = [pscustomobject]@{
+        'TotalCallers' = $RawData.'@odata.count'
+        '@odata.count' = $RawData.'@odata.count'
+        '@odata.context' = $RawData.'@odata.context'
+        '@odata.nextLink' = $RawData.'@odata.nextLink'
+        'NumRequests'  = 1
+        'value'        = [System.Collections.Generic.List[object]]::new()
+    }
+    
+    [void]$Callers.value.AddRange($RawData.value)
+    
+    if ($All -and ($Callers.TotalCallers -gt 100)) {
+        Write-Verbose "Looping to request all [$($Callers.TotalCallers)] results"
+        
+        # Determine how many requests we need to make. We can only obtain 100 at a time.
+        $Remainder = 0
+        $Callers.NumRequests = [math]::DivRem($Callers.TotalCallers, 100, [ref]$Remainder)
+        
+        if ($Remainder -ne 0) {
+            # The number of callers is not divisible by 100 without a remainder. Therefore we need at least 
+            # one more request to retrieve all callers. 
+            $Callers.NumRequests++
+        }
+        
+        for ($RequestCounter = 1; $RequestCounter -lt $Callers.NumRequests; $RequestCounter++) {
+            Write-Verbose "Request $RequestCounter of $($Callers.NumRequests)"
+            
+            $Parameters['$skip'] = ($RequestCounter * 100)
+            
+            $uri = BuildNewURI -APIType OData -Segments $Segments -Parameters $Parameters
+            
+            $Callers.value.AddRange((InvokeVivantioRequest -URI $uri -Raw:$Raw).value)
+        }
+    }
+    
+    $Callers
 }
 
 #endregion
@@ -457,54 +402,6 @@ function Get-VivantioCredential {
 
 #endregion
 
-#region File Get-VivantioHostname.ps1
-
-function Get-VivantioHostname {
-    [CmdletBinding()]
-    param ()
-
-    Write-Verbose "Getting Vivantio hostname"
-    if ($null -eq $script:VivantioPSConfig.Hostname) {
-        throw "Vivantio Hostname is not set! You may set it with Set-VivantioHostname -Hostname 'hostname.domain.tld'"
-    }
-
-    $script:VivantioPSConfig.Hostname
-}
-
-#endregion
-
-#region File Get-VivantioHostPort.ps1
-
-function Get-VivantioHostPort {
-    [CmdletBinding()]
-    param ()
-
-    Write-Verbose "Getting Vivantio host port"
-    if ($null -eq $script:VivantioPSConfig.HostPort) {
-        throw "Vivantio host port is not set! You may set it with Set-VivantioHostPort -Port 'https'"
-    }
-
-    $script:VivantioPSConfig.HostPort
-}
-
-#endregion
-
-#region File Get-VivantioHostScheme.ps1
-
-function Get-VivantioHostScheme {
-    [CmdletBinding()]
-    param ()
-
-    Write-Verbose "Getting Vivantio host scheme"
-    if ($null -eq $script:VivantioPSConfig.Hostscheme) {
-        throw "Vivantio host sceme is not set! You may set it with Set-VivantioHostScheme -Scheme 'https'"
-    }
-
-    $script:VivantioPSConfig.HostScheme
-}
-
-#endregion
-
 #region File Get-VivantioInvokeParams.ps1
 
 function Get-VivantioInvokeParams {
@@ -517,6 +414,375 @@ function Get-VivantioInvokeParams {
     }
 
     $script:VivantioPSConfig.InvokeParams
+}
+
+#endregion
+
+#region File Get-VivantioODataURI.ps1
+
+
+function Get-VivantioODataURI {
+    [CmdletBinding()]
+    [OutputType([System.UriBuilder])]
+    param ()
+    
+    Write-Verbose "Getting Vivantio OData URI"
+    if ($null -eq $script:VivantioPSConfig.URI.OData) {
+        throw "Vivantio OData URI  is not set! You may set it with Set-VivantioODataURI -URI 'https://hostname.domain.tld/path'"
+    }
+    
+    $script:VivantioPSConfig.URI.OData
+}
+
+#endregion
+
+#region File Get-VivantioODataURIHost.ps1
+
+function Get-VivantioODataURIHost {
+    [CmdletBinding()]
+    param ()
+
+    Write-Verbose "Getting Vivantio OData URI host"
+    if ($null -eq $script:VivantioPSConfig.URI.OData.Host) {
+        throw "Vivantio OData URI host is not set! You may set it with Set-VivantioODataURIHost -Hostname 'hostname.domain.tld'"
+    }
+
+    $script:VivantioPSConfig.URI.OData.Host
+}
+
+#endregion
+
+#region File Get-VivantioODataURIPort.ps1
+
+function Get-VivantioODataURIPort {
+    [CmdletBinding()]
+    param ()
+
+    Write-Verbose "Getting Vivantio OData URI port"
+    if ($null -eq $script:VivantioPSConfig.URI.OData.Port) {
+        throw "Vivantio OData URI port is not set! You may set it with Set-VivantioODataURIPort -Port 443"
+    }
+
+    $script:VivantioPSConfig.URI.OData.Port
+}
+
+#endregion
+
+#region File Get-VivantioODataURIScheme.ps1
+
+function Get-VivantioODataURIScheme {
+    [CmdletBinding()]
+    param ()
+
+    Write-Verbose "Getting Vivantio OData URI scheme"
+    if ($null -eq $script:VivantioPSConfig.URI.OData.Scheme) {
+        throw "Vivantio OData URI scheme is not set! You may set it with Set-VivantioODataURIScheme -Scheme 'https'"
+    }
+
+    $script:VivantioPSConfig.URI.OData.Scheme
+}
+
+#endregion
+
+#region File Get-VivantioRPCCallerById.ps1
+
+function Get-VivantioRPCCallerById {
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(ValueFromPipeline = $true,
+                   ValueFromPipelineByPropertyName = $true,
+                   Position = 0)]
+        [uint32[]]$Id,
+        
+        [switch]$Raw
+    )
+    
+    begin {
+        
+    }
+    
+    process {
+        foreach ($i in $Id) {
+            #$URIComponents = BuildURIComponents -URISegments $Segments -ParametersDictionary $PSBoundParameters
+            #$uri = BuildNewURI -Segments $URIComponents.Segments -Parameters $URIComponents.Parameters
+            
+            $Segments = [System.Collections.ArrayList]::new(@('Caller', 'SelectById', $i))
+            $uri = BuildNewURI -Segments $Segments
+            
+            InvokeVivantioRequest -URI $uri -Raw:$Raw -Method POST
+        }
+    }
+    
+    end {
+        
+    }
+}
+
+#endregion
+
+#region File Get-VivantioRPCClient.ps1
+
+
+function Get-VivantioRPCClient {
+    [CmdletBinding(DefaultParameterSetName = 'SelectById')]
+    param
+    (
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('Select', 'SelectById', 'SelectByQueue', 'SelectPage', IgnoreCase = $true)]
+        [string]$Method = 'SelectById',
+        
+        [Parameter(ParameterSetName = 'Select',
+                   Mandatory = $true)]
+        [hashtable]$Query,
+        
+        [Parameter(ParameterSetName = 'SelectById',
+                   Mandatory = $true)]
+        [uint64[]]$Id,
+        
+        [Parameter(ParameterSetName = 'SelectByQueue',
+                   Mandatory = $true)]
+        [object]$Queue,
+        
+        [Parameter(ParameterSetName = 'SelectPage',
+                   Mandatory = $true)]
+        [hashtable]$Page,
+        
+        [switch]$Raw
+    )
+    
+    begin {
+        $Segments = [System.Collections.ArrayList]::new(@('Client'))
+    }
+    
+    process {
+        switch ($Method) {
+            'Select' {
+                throw "'SELECT' NOT IMPLEMENTED"
+                [void]$Segments.Add($Method)
+                
+                break
+            }
+            
+            'SelectByIdOld' {
+                [void]$Segments.Add('SelectById')
+                [void]$Segments.Add(':id') # Placeholder to edit later
+                
+                Write-Verbose "$(@($Value).Count) IDs to select"
+                
+                foreach ($v in $Value) {
+                    $Id = $null
+                    
+                    if (-not [uint64]::TryParse($v, [ref]$Id)) {
+                        Write-Error -Exception ([System.Exception]::new("[$v] from provided Value array is not a valid uint64 value")) -Category InvalidType -TargetObject $v
+                        continue
+                    }
+                    
+                    Write-Verbose "Selecting by Id '$Id'"
+                    
+                    $Segments[-1] = $Id
+                    
+                    $uri = BuildNewURI -Segments $Segments
+                    
+                    InvokeVivantioRequest -URI $uri -Raw:$Raw -Method POST
+                }
+                
+                break
+            }
+            
+            'SelectById' {
+                [void]$Segments.Add('SelectList')
+                
+                Write-Verbose "$(@($Value).Count) IDs to select"
+                
+                $IDListJSON = ,@($Id) | ConvertTo-Json -Compress
+                $uri = BuildNewURI -Segments $Segments
+                
+                InvokeVivantioRequest -URI $uri -Body $IDListJSON -Raw:$Raw -Method POST
+                
+                break
+            }
+            
+            default {
+                throw "'$_' NOT IMPLEMENTED"
+            }
+        }
+    }
+    
+    end {
+        
+    }
+}
+
+#endregion
+
+#region File Get-VivantioRPCClientById.ps1
+
+
+function Get-VivantioRPCClientById {
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(ValueFromPipeline = $true,
+                   ValueFromPipelineByPropertyName = $true,
+                   Position = 0)]
+        [uint32[]]$Id,
+        
+        [switch]$Raw
+    )
+    
+    begin {
+        $Segments = [System.Collections.ArrayList]::new(@('Client', 'SelectById', $i))
+    }
+    
+    process {
+        foreach ($i in $Id) {
+            #$URIComponents = BuildURIComponents -URISegments $Segments -ParametersDictionary $PSBoundParameters
+            #$uri = BuildNewURI -Segments $URIComponents.Segments -Parameters $URIComponents.Parameters
+            
+            $Segments[-1] = $i
+            $uri = BuildNewURI -Segments $Segments
+            
+            InvokeVivantioRequest -URI $uri -Raw:$Raw -Method POST
+            
+            #Get-VivantioRPCData -Endpoint 'Client' -Method 'SelectById' -Value $i -Raw:$Raw
+        }
+    }
+    
+    end {
+        
+    }
+}
+
+#endregion
+
+#region File Get-VivantioRPCData.ps1
+
+
+function Get-VivantioRPCData {
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('Article', 'Asset', 'Caller', 'Client', 'Entity', 'Location', 'Ticket', IgnoreCase = $true)]
+        [string]$Endpoint,
+        
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('Select', 'SelectById', 'SelectByQueue', 'SelectList', 'SelectPage', IgnoreCase = $true)]
+        [string]$Method = 'SelectById',
+        
+        [Parameter(Mandatory = $true)]
+        [string[]]$Value,
+        
+        [switch]$Raw
+    )
+    
+    begin {
+        $Segments = [System.Collections.ArrayList]::new(@($Endpoint, $Method))
+    }
+    
+    process {
+        switch ($Method) {
+            'Select' {
+                
+                break
+            }
+            
+            'SelectById' {
+                [void]$Segments.Add(':id')
+                
+                Write-Verbose "$(@($Value).Count) IDs to select"
+                
+                foreach ($v in $Value) {
+                    $Id = $null
+                    
+                    if (-not [uint64]::TryParse($v, [ref]$Id)) {
+                        Write-Error -Exception ([System.Exception]::new("[$v] from provided Value array is not a valid uint64 value")) -Category InvalidType -TargetObject $v
+                        continue
+                    }
+                    
+                    Write-Verbose "Selecting by Id '$Id'"
+                    
+                    $Segments[-1] = $Id
+                    
+                    $uri = BuildNewURI -Segments $Segments
+                    
+                    InvokeVivantioRequest -URI $uri -Raw:$Raw -Method POST
+                }
+                
+                break
+            }
+        }
+    }
+    
+    end {
+        
+    }
+}
+
+#endregion
+
+#region File Get-VivantioRPCURI.ps1
+
+
+function Get-VivantioAPIURI {
+    [CmdletBinding()]
+    param ()
+    
+    Write-Verbose "Getting Vivantio API URI "
+    if ($null -eq $script:VivantioPSConfig.URI.RPC) {
+        throw "Vivantio API URI is not set! You may set it with Set-VivantioURI -URI 'https://hostname.domain.tld/path'"
+    }
+    
+    $script:VivantioPSConfig.URI.RPC
+}
+
+#endregion
+
+#region File Get-VivantioRPCURIHost.ps1
+
+function Get-VivantioAPIURIHost {
+    [CmdletBinding()]
+    param ()
+
+    Write-Verbose "Getting Vivantio API URI Host"
+    if ($null -eq $script:VivantioPSConfig.URI.RPC.Host) {
+        throw "Vivantio API URI Host is not set! You may set it with Set-VivantioURIHost -Hostname 'hostname.domain.tld'"
+    }
+
+    $script:VivantioPSConfig.URI.RPC.Host
+}
+
+#endregion
+
+#region File Get-VivantioRPCURIPort.ps1
+
+function Get-VivantioAPIURIPort {
+    [CmdletBinding()]
+    param ()
+
+    Write-Verbose "Getting Vivantio API URI port"
+    if ($null -eq $script:VivantioPSConfig.URI.RPC.Port) {
+        throw "Vivantio API URI port is not set! You may set it with Set-VivantioAPIURIPort -Port 443"
+    }
+
+    $script:VivantioPSConfig.URI.RPC.Port
+}
+
+#endregion
+
+#region File Get-VivantioRPCURIScheme.ps1
+
+function Get-VivantioAPIURIScheme {
+    [CmdletBinding()]
+    param ()
+
+    Write-Verbose "Getting Vivantio API URI scheme"
+    if ($null -eq $script:VivantioPSConfig.URI.RPC.Scheme) {
+        throw "Vivantio API URI scheme is not set! You may set it with Set-VivantioAPIURIScheme -Scheme 'https'"
+    }
+
+    $script:VivantioPSConfig.URI.RPC.Scheme
 }
 
 #endregion
@@ -539,56 +805,42 @@ function Get-VivantioTimeout {
 
 #endregion
 
-#region File Get-VivantioVersion.ps1
+#region File GetHTTPBasicAuthorizationString.ps1
 
 
-function Get-VivantioVersion {
-    [CmdletBinding()]
-    param ()
-
-    $Segments = [System.Collections.ArrayList]::new(@('status'))
-
-    $URIComponents = BuildURIComponents -URISegments $Segments -ParametersDictionary @{
-        'format' = 'json'
-    }
-
-    $URI = BuildNewURI -Segments $URIComponents.Segments -Parameters $URIComponents.Parameters -SkipConnectedCheck
-
-    InvokeVivantioRequest -URI $URI
-}
-
-#endregion
-
-#region File GetVivantioAPIErrorBody.ps1
-
-<#
-	.NOTES
-	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2020 v5.7.172
-	 Created on:   	3/26/2020 14:23
-	 Created by:   	Claussen
-	 Organization: 	NEOnet
-	 Filename:     	GetVivantioAPIErrorBody.ps1
-	===========================================================================
-	.DESCRIPTION
-		A description of the file.
-#>
-
-
-function GetVivantioAPIErrorBody {
+function GetHTTPBasicAuthorizationString {
+    [CmdletBinding(DefaultParameterSetName = 'String')]
+    [OutputType([string], ParameterSetName = 'String')]
+    [OutputType([hashtable], ParameterSetName = 'Hashtable')]
     param
     (
-        [Parameter(Mandatory = $true)]
-        [System.Net.HttpWebResponse]$Response
+        [Parameter(Mandatory = $false)]
+        [pscredential]$Credential,
+        
+        [Parameter(ParameterSetName = 'Hashtable')]
+        [switch]$Hashtable
     )
-
-    # This takes the $Response stream and turns it into a useable object... generally a string.
-    # If the body is JSON, you should be able to use ConvertFrom-Json
-
-    $reader = New-Object System.IO.StreamReader($Response.GetResponseStream())
-    $reader.BaseStream.Position = 0
-    $reader.DiscardBufferedData()
-    $reader.ReadToEnd()
+    
+    if (-not $PSBoundParameters.ContainsKey('Credential')) {
+        if (-not ($Credential = Get-Credential -Message "Please provide credentials")) {
+            throw "You must provide credentials"
+        }
+    }
+    
+    $bytes = [System.Text.Encoding]::ASCII.GetBytes($("{0}:{1}" -f $Credential.UserName, $Credential.GetNetworkCredential().Password))
+    $base64 = [System.Convert]::ToBase64String($bytes)
+    
+    switch ($PSCmdlet.ParameterSetName) {
+        'Hashtable' {
+            Write-Output( [hashtable]@{
+                'Authorization' = "Basic $base64"
+            })
+        }
+        
+        default {
+            Write-Output "Basic $base64"
+        }
+    }
 }
 
 #endregion
@@ -603,19 +855,6 @@ function GetVivantioConfigVariable {
 
 #region File InvokeVivantioRequest.ps1
 
-<#
-	.NOTES
-	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2020 v5.7.172
-	 Created on:   	3/26/2020 14:24
-	 Created by:   	Claussen
-	 Organization: 	NEOnet
-	 Filename:     	InvokeVivantioRequest.ps1
-	===========================================================================
-	.DESCRIPTION
-		A description of the file.
-#>
-
 
 function InvokeVivantioRequest {
     [CmdletBinding()]
@@ -624,10 +863,9 @@ function InvokeVivantioRequest {
         [Parameter(Mandatory = $true)]
         [System.UriBuilder]$URI,
 
-        [Hashtable]$Headers = @{
-        },
+        [Hashtable]$Headers = @{},
 
-        [pscustomobject]$Body = $null,
+        [pscustomobject]$Body,
 
         [ValidateRange(1, 65535)]
         [uint16]$Timeout = (Get-VivantioTimeout),
@@ -638,28 +876,29 @@ function InvokeVivantioRequest {
         [switch]$Raw
     )
 
-    $creds = Get-VivantioCredential
-
-    $Headers.Authorization = "Token {0}" -f $creds.GetNetworkCredential().Password
+    $Headers['Authorization'] = GetHTTPBasicAuthorizationString -Credential (Get-VivantioCredential)
 
     $splat = @{
         'Method'      = $Method
         'Uri'         = $URI.Uri.AbsoluteUri # This property auto generates the scheme, hostname, path, and query
         'Headers'     = $Headers
         'TimeoutSec'  = $Timeout
-        'ContentType' = 'application/json'
         'ErrorAction' = 'Stop'
         'Verbose'     = $VerbosePreference
     }
 
-    $splat += Get-VivantioInvokeParams
-
-    if ($Body) {
+    if ($PSBoundParameters.ContainsKey('Body')) {
         Write-Verbose "BODY: $($Body | ConvertTo-Json -Compress)"
-        $null = $splat.Add('Body', ($Body | ConvertTo-Json -Compress))
+        $splat['Body'] = ($Body | ConvertTo-Json -Compress)
+        $splat['ContentType'] = 'application/json'
     }
-
-    $result = Invoke-RestMethod @splat
+    
+    try {
+        Write-Verbose "Calling URI: $($URI.Uri.AbsoluteUri)"
+        $result = Invoke-RestMethod @splat
+    } catch {
+        throw $_
+    }
 
     #region TODO: Handle errors a little more gracefully...
 
@@ -701,11 +940,14 @@ function InvokeVivantioRequest {
         Write-Verbose "Returning raw result by choice"
         return $result
     } else {
-        if ($result.psobject.Properties.Name.Contains('results')) {
-            Write-Verbose "Found Results property on data, returning results directly"
-            return $result.Results
+        if ($result.psobject.Properties.Name.Contains('Item')) {
+            Write-Verbose "Found 'Item' property on data, returning 'Item' directly"
+            return $result.Item
+        } elseif ($result.psobject.Properties.Name.Contains('value')) {
+            Write-Verbose "Found 'value' property on data, returning 'value' directly"
+            return $result.value
         } else {
-            Write-Verbose "Did NOT find results property on data, returning raw result"
+            Write-Verbose "Did NOT find 'item' or 'value' property on data, returning raw result"
             return $result
         }
     }
@@ -713,15 +955,44 @@ function InvokeVivantioRequest {
 
 #endregion
 
-#region File Set-VivantioCipherSSL.ps1
+#region File New-VivantioODataFilter.ps1
 
-Function Set-VivantioCipherSSL {
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseShouldProcessforStateChangingFunctions", "")]
-    Param(  )
-    # Hack for allowing TLS 1.1 and TLS 1.2 (by default it is only SSL3 and TLS (1.0))
-    $AllProtocols = [System.Net.SecurityProtocolType]'Ssl3,Tls,Tls11,Tls12'
-    [System.Net.ServicePointManager]::SecurityProtocol = $AllProtocols
 
+function New-VivantioODataFilter {
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true,
+                   Position = 0)]
+        [ValidateSet('caller.contactroles.listserv', 'Id', 'Name', 'FirstName', 'LastName', 'Email', 'Phone', 'ClientId', 'LocationId', 'LocationName', 'ExternalKey', 'CreateDate', 'UpdateDate', 'RecordTypeId', 'Deleted', IgnoreCase = $true)]
+        [string]$Property,
+        
+        [Parameter(Position = 1)]
+        [ValidateSet('eq', 'ne', 'gt', 'lt', IgnoreCase = $true)]
+        [string]$Operator = 'eq',
+        
+        [Parameter(Mandatory = $true,
+                   Position = 2)]
+        [AllowEmptyString()]
+        [AllowNull()]
+        [string]$Value,
+        
+        [Parameter(Position = 3)]
+        [ValidateSet('String', 'Integer', 'Boolean', IgnoreCase = $true)]
+        [string]$ValueType = 'String'
+    )
+    
+    if ($Operator -notin @('eq', 'ne')) {
+        Write-Warning "Implementation of [$Operator] may be incomplete by Vivantio and return unexpected results!"
+    }
+    
+    $baseString = "{0}='{1}' {2}" -f '$filter', $Property, $Operator
+    
+    if ($ValueType -ieq 'string') {
+        "{0} '{1}'" -f $baseString, $Value
+    } else {
+        "{0} {1}" -f $baseString, $Value
+    }
 }
 
 #endregion
@@ -763,63 +1034,81 @@ function Set-VivantioCredential {
 
 #endregion
 
-#region File Set-VivantioHostName.ps1
+#region File Set-VivantioODataHostName.ps1
 
-function Set-VivantioHostName {
+function Set-VivantioODataURIHost {
     [CmdletBinding(ConfirmImpact = 'Low',
                    SupportsShouldProcess = $true)]
     [OutputType([string])]
     param
     (
         [Parameter(Mandatory = $true)]
-        [string]$Hostname,
-        
-        [switch]$OData
+        [string]$Hostname
     )
     
-    if ($PSCmdlet.ShouldProcess('Vivantio Hostname', 'Set')) {
-        if ($OData) {
-            $script:VivantioPSConfig['HostnameOData'] = $Hostname.Trim()
-            $script:VivantioPSConfig.HostnameOData
-        } else {
-            $script:VivantioPSConfig['Hostname'] = $Hostname.Trim()
-            $script:VivantioPSConfig.Hostname
-        }
+    if ($PSCmdlet.ShouldProcess('Vivantio OData URI Host', 'Set')) {
+        $script:VivantioPSConfig.URI.OData.Host = $Hostname.Trim()
+        $script:VivantioPSConfig.URI.OData.Host
     }
 }
 
 #endregion
 
-#region File Set-VivantioHostPort.ps1
+#region File Set-VivantioODataURI.ps1
 
-function Set-VivantioHostPort {
+
+function Set-VivantioODataURI {
+    [CmdletBinding(ConfirmImpact = 'Low',
+                   SupportsShouldProcess = $true)]
+    [OutputType([System.UriBuilder])]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [string]$URI,
+        
+        [switch]$PassThru
+    )
+    
+    $uriBuilder = [System.UriBuilder]::new($URI)
+    
+    if ($PSCmdlet.ShouldProcess('Vivantio OData URI', 'Set')) {
+        if ($uriBuilder.Scheme -ieq 'http') {
+            Write-Warning "Connecting to OData via insecure HTTP is not recommended!"
+        }
+        
+        $script:VivantioPSConfig.URI.OData = $uriBuilder
+    }
+    
+    if ($PassThru) {
+        $script:VivantioPSConfig.URI.OData
+    }
+}
+
+#endregion
+
+#region File Set-VivantioODataURIPort.ps1
+
+function Set-VivantioODataURIPort {
     [CmdletBinding(ConfirmImpact = 'Low',
                    SupportsShouldProcess = $true)]
     [OutputType([string])]
     param
     (
         [Parameter(Mandatory = $true)]
-        [uint16]$Port,
-        
-        [switch]$OData
+        [uint16]$Port
     )
     
-    if ($PSCmdlet.ShouldProcess('Vivantio Port', 'Set')) {
-        if ($OData) {
-            $script:VivantioPSConfig['HostPortOData'] = $Port
-            $script:VivantioPSConfig.HostPortOData
-        } else {
-            $script:VivantioPSConfig['HostPort'] = $Port
-            $script:VivantioPSConfig.HostPort
-        }
+    if ($PSCmdlet.ShouldProcess('Vivantio OData URI Port', 'Set')) {
+        $script:VivantioPSConfig.URI.OData.Port = $Port
+        $script:VivantioPSConfig.URI.OData.Port
     }
 }
 
 #endregion
 
-#region File Set-VivantioHostScheme.ps1
+#region File Set-VivantioODataURIScheme.ps1
 
-function Set-VivantioHostScheme {
+function Set-VivantioODataURIScheme {
     [CmdletBinding(ConfirmImpact = 'Low',
                    SupportsShouldProcess = $true)]
     [OutputType([string])]
@@ -827,43 +1116,113 @@ function Set-VivantioHostScheme {
     (
         [Parameter(Mandatory = $false)]
         [ValidateSet('https', 'http', IgnoreCase = $true)]
-        [string]$Scheme = 'https',
-        
-        [switch]$OData
+        [string]$Scheme = 'https'
     )
 
-    if ($PSCmdlet.ShouldProcess('Vivantio Host Scheme', 'Set')) {
-        if ($Scheme -eq 'http') {
-            Write-Warning "Connecting via non-secure HTTP is not-recommended"
+    if ($PSCmdlet.ShouldProcess('Vivantio OData URI Scheme', 'Set')) {
+        if ($Scheme -ieq 'http') {
+            Write-Warning "Connecting to OData via insecure HTTP is not recommended!"
         }
-        
-        if ($Odata) {
-            $script:VivantioPSConfig['HostSchemeOData'] = $Scheme
-            $script:VivantioPSConfig.HostSchemeOData
-        } else {
-            $script:VivantioPSConfig['HostScheme'] = $Scheme
-            $script:VivantioPSConfig.HostScheme
-        }
-        
+    
+        $script:VivantioPSConfig.URI.OData.Scheme = $Scheme.ToLower()
+        $script:VivantioPSConfig.URI.OData.Scheme
     }
 }
 
 #endregion
 
-#region File Set-VivantioInvokeParams.ps1
+#region File Set-VivantioRPCURI.ps1
 
-function Set-VivantioInvokeParams {
+
+function Set-VivantioAPIURI {
     [CmdletBinding(ConfirmImpact = 'Low',
-        SupportsShouldProcess = $true)]
-    [OutputType([string])]
-    param(
+                   SupportsShouldProcess = $true)]
+    [OutputType([System.UriBuilder])]
+    param
+    (
         [Parameter(Mandatory = $true)]
-        [array]$InvokeParams
+        [string]$URI,
+        
+        [switch]$PassThru
+    )
+    
+    $uriBuilder = [System.UriBuilder]::new($URI)
+    
+    if ($PSCmdlet.ShouldProcess('Vivantio API URI', 'Set')) {
+        if ($uriBuilder.Scheme -ieq 'http') {
+            Write-Warning "Connecting to API via insecure HTTP is not recommended!"
+        }
+        
+        $script:VivantioPSConfig.URI.RPC = $uriBuilder
+    }
+    
+    if ($PassThru) {
+        $script:VivantioPSConfig.URI.RPC
+    }
+}
+
+#endregion
+
+#region File Set-VivantioRPCURIHost.ps1
+
+function Set-VivantioAPIURIHost {
+    [CmdletBinding(ConfirmImpact = 'Low',
+                   SupportsShouldProcess = $true)]
+    [OutputType([string])]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [string]$Hostname
+    )
+    
+    if ($PSCmdlet.ShouldProcess('Vivantio API URI Host', 'Set')) {
+        $script:VivantioPSConfig.URI.RPC.Host = $Hostname.Trim()
+        $script:VivantioPSConfig.URI.RPC.Host
+    }
+}
+
+#endregion
+
+#region File Set-VivantioRPCURIPort.ps1
+
+function Set-VivantioAPIURIPort {
+    [CmdletBinding(ConfirmImpact = 'Low',
+                   SupportsShouldProcess = $true)]
+    [OutputType([string])]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [uint16]$Port
+    )
+    
+    if ($PSCmdlet.ShouldProcess('Vivantio API URI Port', 'Set')) {
+        $script:VivantioPSConfig.URI.RPC.Port = $Port
+        $script:VivantioPSConfig.URI.RPC.Port
+    }
+}
+
+#endregion
+
+#region File Set-VivantioRPCURIScheme.ps1
+
+function Set-VivantioAPIURIScheme {
+    [CmdletBinding(ConfirmImpact = 'Low',
+                   SupportsShouldProcess = $true)]
+    [OutputType([string])]
+    param
+    (
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('https', 'http', IgnoreCase = $true)]
+        [string]$Scheme = 'https'
     )
 
-    if ($PSCmdlet.ShouldProcess('Vivantio Invoke Params', 'Set')) {
-        $script:VivantioPSConfig.InvokeParams = $InvokeParams
-        $script:VivantioPSConfig.InvokeParams
+    if ($PSCmdlet.ShouldProcess('Vivantio API URI Scheme', 'Set')) {
+        if ($Scheme -eq 'http') {
+            Write-Warning "Connecting to API via insecure HTTP is not recommended!"
+        }
+    
+        $script:VivantioPSConfig.URI.RPC.Scheme = $Scheme.ToLower()
+        $script:VivantioPSConfig.URI.RPC.Scheme
     }
 }
 
@@ -891,30 +1250,6 @@ function Set-VivantioTimeout {
 
 #endregion
 
-#region File Set-VivantioUnstrustedSSL.ps1
-
-Function Set-VivantioUntrustedSSL {
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseShouldProcessforStateChangingFunctions", "")]
-    Param(  )
-    # Hack for allowing untrusted SSL certs with https connections
-    Add-Type -TypeDefinition @"
-    using System.Net;
-    using System.Security.Cryptography.X509Certificates;
-    public class TrustAllCertsPolicy : ICertificatePolicy {
-        public bool CheckValidationResult(
-        ServicePoint srvPoint, X509Certificate certificate,
-        WebRequest request, int certificateProblem) {
-            return true;
-        }
-    }
-"@
-
-    [System.Net.ServicePointManager]::CertificatePolicy = New-Object -TypeName TrustAllCertsPolicy
-
-}
-
-#endregion
-
 #region File SetupVivantioConfigVariable.ps1
 
 function SetupVivantioConfigVariable {
@@ -925,29 +1260,58 @@ function SetupVivantioConfigVariable {
     )
 
     Write-Verbose "Checking for VivantioConfig hashtable"
-    if ((-not ($script:VivantioPSConfig)) -or $Overwrite) {
+    if (($null -eq $script:VivantioPSConfig) -or $Overwrite) {
         Write-Verbose "Creating VivantioConfig hashtable"
         $script:VivantioPSConfig = @{
-            'Connected'     = $false
+            'Connected' = $false
+            'URI'       = [pscustomobject]@{
+                'RPC' = [System.UriBuilder]::new()
+                'OData' = [System.UriBuilder]::new()
+            }
         }
+    } else {
+        Write-Warning "Cannot overwrite VivantioConfig without -Overwrite parameter!"
     }
-
-    Write-Verbose "VivantioConfig hashtable already exists"
 }
 
 #endregion
 
 #region File VerifyAPIConnectivity.ps1
 
+
 function VerifyAPIConnectivity {
     [CmdletBinding()]
     param ()
+    
+    Write-Verbose "Verifying API connectivity"
+    
+    $uriSegments = [System.Collections.ArrayList]::new(@('Caller', 'SelectById', '1'))
 
-    $uriSegments = [System.Collections.ArrayList]::new(@('extras'))
+    $uri = BuildNewURI -APIType API -Segments $uriSegments -SkipConnectedCheck
 
-    $uri = BuildNewURI -Segments $uriSegments -Parameters @{'format' = 'json' } -SkipConnectedCheck
+    InvokeVivantioRequest -URI $uri -Method POST -ErrorAction Stop
+}
 
-    InvokeVivantioRequest -URI $uri
+#endregion
+
+#region File VerifyODataConnectivity.ps1
+
+
+function VerifyODataConnectivity {
+    [CmdletBinding()]
+    param ()
+    
+    Write-Verbose "Verifying OData connectivity"
+    
+    $uriSegments = [System.Collections.ArrayList]::new(@('Callers'))
+    
+    $uriParameters = @{
+        '$filter' = 'id eq 1'
+    }
+    
+    $uri = BuildNewURI -APIType OData -Segments $uriSegments -Parameters $uriParameters -SkipConnectedCheck
+    
+    InvokeVivantioRequest -URI $uri -ErrorAction Stop
 }
 
 #endregion
@@ -973,6 +1337,8 @@ $script:CommonParameterNames = New-Object System.Collections.ArrayList
 
 SetupVivantioConfigVariable
 
-Export-ModuleMember -Function *
+Export-ModuleMember -Function '*-*'
 
 
+## Exporting all functions for development ##
+Export-ModuleMember -Function '*'

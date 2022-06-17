@@ -6,16 +6,16 @@
     )
 
     Write-Verbose "Checking for VivantioConfig hashtable"
-    if ((-not ($script:VivantioPSConfig)) -or $Overwrite) {
+    if (($null -eq $script:VivantioPSConfig) -or $Overwrite) {
         Write-Verbose "Creating VivantioConfig hashtable"
         $script:VivantioPSConfig = @{
             'Connected' = $false
-            'URI'       = @{
-                'API' = [System.UriBuilder]::new()
+            'URI'       = [pscustomobject]@{
+                'RPC' = [System.UriBuilder]::new()
                 'OData' = [System.UriBuilder]::new()
             }
         }
+    } else {
+        Write-Warning "Cannot overwrite VivantioConfig without -Overwrite parameter!"
     }
-
-    Write-Verbose "VivantioConfig hashtable already exists"
 }

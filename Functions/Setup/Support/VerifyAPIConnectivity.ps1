@@ -1,10 +1,13 @@
-﻿function VerifyAPIConnectivity {
+﻿
+function VerifyAPIConnectivity {
     [CmdletBinding()]
     param ()
+    
+    Write-Verbose "Verifying API connectivity"
+    
+    $uriSegments = [System.Collections.ArrayList]::new(@('Caller', 'SelectById', '1'))
 
-    $uriSegments = [System.Collections.ArrayList]::new(@('extras'))
+    $uri = BuildNewURI -APIType API -Segments $uriSegments -SkipConnectedCheck
 
-    $uri = BuildNewURI -Segments $uriSegments -Parameters @{'format' = 'json' } -SkipConnectedCheck
-
-    InvokeVivantioRequest -URI $uri
+    InvokeVivantioRequest -URI $uri -Method POST -ErrorAction Stop
 }

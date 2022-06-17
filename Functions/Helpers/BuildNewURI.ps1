@@ -1,17 +1,4 @@
-﻿<#
-	.NOTES
-	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2020 v5.7.172
-	 Created on:   	3/26/2020 14:22
-	 Created by:   	Claussen
-	 Organization: 	NEOnet
-	 Filename:     	BuildNewURI.ps1
-	===========================================================================
-	.DESCRIPTION
-		A description of the file.
-#>
-
-
+﻿
 function BuildNewURI {
 <#
     .SYNOPSIS
@@ -20,14 +7,14 @@ function BuildNewURI {
     .DESCRIPTION
         Internal function used to build a URIBuilder object.
     
+    .PARAMETER APIType
+        A description of the APIType parameter.
+    
     .PARAMETER Segments
         Array of strings for each segment in the URL path
     
     .PARAMETER Parameters
         Hashtable of query parameters to include
-    
-    .PARAMETER APIType
-        A description of the APIType parameter.
     
     .PARAMETER SkipConnectedCheck
         A description of the SkipConnectedCheck parameter.
@@ -55,14 +42,14 @@ function BuildNewURI {
     [OutputType([System.UriBuilder])]
     param
     (
+        [ValidateSet('API', 'OData', IgnoreCase = $true)]
+        [string]$APIType = 'API',
+        
         [Parameter(Mandatory = $false)]
         [string[]]$Segments,
         
         [Parameter(Mandatory = $false)]
         [hashtable]$Parameters,
-        
-        [ValidateSet('API', 'OData', IgnoreCase = $true)]
-        [string]$APIType = 'API',
         
         [switch]$SkipConnectedCheck
     )
@@ -74,15 +61,16 @@ function BuildNewURI {
         $null = CheckVivantioIsConnected
     }
     
-    # Begin a URI builder with HTTP/HTTPS and the provided hostname
+    # Create a new URIBuilder from our pre-configured URIs
+    # If you simply assign $script:VivantioPSConfig.URI.RPC, you will then directly modify the original
     $uriBuilder = if ($APIType -eq 'API') {
-        [System.UriBuilder]::new($script:VivantioConfig.HostScheme, $script:VivantioConfig.Hostname, $script:VivantioConfig.HostPort)
+        [System.UriBuilder]::new($script:VivantioPSConfig.URI.RPC.ToString())
     } else {
-        [System.UriBuilder]::new($script:VivantioConfig.HostSchemeOData, $script:VivantioConfig.HostnameOData, $script:VivantioConfig.HostPortOData)
+        [System.UriBuilder]::new($script:VivantioPSConfig.URI.OData.ToString())
     }
     
     # Generate the path by trimming excess slashes and whitespace from the $segments[] and joining together
-    $uriBuilder.Path = "{0}/{1}/" -f $APIType.ToLower(), ($Segments.ForEach({
+    $uriBuilder.Path = "{0}/{1}/" -f $uriBuilder.Path.TrimEnd('/'), ($Segments.ForEach({
                 $_.trim('/').trim()
             }) -join '/')
     
@@ -104,3 +92,6 @@ function BuildNewURI {
     # Return the entire UriBuilder object
     $uriBuilder
 }
+
+
+
