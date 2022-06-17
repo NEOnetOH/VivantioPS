@@ -1,0 +1,11 @@
+*.TempPoint.*
+*.Export.*
+*.psprojs
+*.psbuild
+*.RestorePoint.*
+*.Run.ps1
+*.Package.ps1
+CustomMenu.inf
+Test-Module.ps1
+Staging/
+concatenated.ps1
