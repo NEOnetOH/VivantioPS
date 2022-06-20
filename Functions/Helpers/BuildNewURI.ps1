@@ -42,8 +42,8 @@ function BuildNewURI {
     [OutputType([System.UriBuilder])]
     param
     (
-        [ValidateSet('API', 'OData', IgnoreCase = $true)]
-        [string]$APIType = 'API',
+        [ValidateSet('RPC', 'OData', IgnoreCase = $true)]
+        [string]$APIType = 'RPC',
         
         [Parameter(Mandatory = $false)]
         [string[]]$Segments,
@@ -63,7 +63,7 @@ function BuildNewURI {
     
     # Create a new URIBuilder from our pre-configured URIs
     # If you simply assign $script:VivantioPSConfig.URI.RPC, you will then directly modify the original
-    $uriBuilder = if ($APIType -eq 'API') {
+    $uriBuilder = if ($APIType -eq 'RPC') {
         [System.UriBuilder]::new($script:VivantioPSConfig.URI.RPC.ToString())
     } else {
         [System.UriBuilder]::new($script:VivantioPSConfig.URI.OData.ToString())

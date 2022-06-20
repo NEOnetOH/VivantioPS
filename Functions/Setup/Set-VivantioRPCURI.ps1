@@ -1,5 +1,5 @@
 
-function Set-VivantioAPIURI {
+function Set-VivantioRPCURI {
     [CmdletBinding(ConfirmImpact = 'Low',
                    SupportsShouldProcess = $true)]
     [OutputType([System.UriBuilder])]
@@ -13,9 +13,9 @@ function Set-VivantioAPIURI {
     
     $uriBuilder = [System.UriBuilder]::new($URI)
     
-    if ($PSCmdlet.ShouldProcess('Vivantio API URI', 'Set')) {
+    if ($PSCmdlet.ShouldProcess('Vivantio RPC URI', 'Set')) {
         if ($uriBuilder.Scheme -ieq 'http') {
-            Write-Warning "Connecting to API via insecure HTTP is not recommended!"
+            Write-Warning "Connecting to RPC API via insecure HTTP is not recommended!"
         }
         
         $script:VivantioPSConfig.URI.RPC = $uriBuilder

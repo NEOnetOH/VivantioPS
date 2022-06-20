@@ -36,7 +36,7 @@ function Connect-VivantioAPI {
         
         [string]$ODataURI = 'https://neonet.vivantio.com/odata/',
         
-        [string]$APIURI = 'https://webservices-na01.vivantio.com/api/',
+        [string]$RPCURI = 'https://webservices-na01.vivantio.com/api/',
         
         [ValidateRange(1, 65535)]
         [ValidateNotNullOrEmpty()]
@@ -55,12 +55,12 @@ function Connect-VivantioAPI {
     }
     
     $null = Set-VivantioODataURI -URI $ODataURI
-    $null = Set-VivantioAPIURI -URI $APIURI
+    $null = Set-VivantioRPCURI -URI $RPCURI
     $null = Set-VivantioCredential -Credential $Credential
     $null = Set-VivantioTimeout -TimeoutSeconds $TimeoutSeconds
     
     try {
-        $null = VerifyAPIConnectivity -ErrorAction Stop
+        $null = VerifyRPCConnectivity -ErrorAction Stop
         $null = VerifyODataConnectivity -ErrorAction Stop
     } catch {
         Write-Verbose "Failed to connect. Generating error"

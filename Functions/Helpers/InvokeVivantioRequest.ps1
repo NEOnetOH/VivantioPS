@@ -48,6 +48,7 @@ function InvokeVivantioRequest {
     }
     
     if ($null -ne $script:VivantioPSConfig.Proxy) {
+        Write-Verbose "Adding proxy '$($script:VivantioPSConfig.Proxy)' to request"
         $splat['Proxy'] = $script:VivantioPSConfig.Proxy
     }
     

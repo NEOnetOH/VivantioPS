@@ -1,11 +1,11 @@
 
-function Get-VivantioAPIURI {
+function Get-VivantioRPCURI {
     [CmdletBinding()]
     param ()
     
-    Write-Verbose "Getting Vivantio API URI "
+    Write-Verbose "Getting Vivantio RPC URI "
     if ($null -eq $script:VivantioPSConfig.URI.RPC) {
-        throw "Vivantio API URI is not set! You may set it with Set-VivantioURI -URI 'https://hostname.domain.tld/path'"
+        throw "Vivantio RPC URI is not set! You may set it with Set-VivantioRPCURI -URI 'https://hostname.domain.tld/path'"
     }
     
     $script:VivantioPSConfig.URI.RPC

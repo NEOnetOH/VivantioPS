@@ -1,5 +1,5 @@
 
-function Get-VivantioCallerByOData {
+function Get-VivantioODataCaller {
     [CmdletBinding()]
     [OutputType([pscustomobject])]
     param

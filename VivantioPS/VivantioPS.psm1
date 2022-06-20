@@ -46,8 +46,8 @@ function BuildNewURI {
     [OutputType([System.UriBuilder])]
     param
     (
-        [ValidateSet('API', 'OData', IgnoreCase = $true)]
-        [string]$APIType = 'API',
+        [ValidateSet('RPC', 'OData', IgnoreCase = $true)]
+        [string]$APIType = 'RPC',
         
         [Parameter(Mandatory = $false)]
         [string[]]$Segments,
@@ -67,7 +67,7 @@ function BuildNewURI {
     
     # Create a new URIBuilder from our pre-configured URIs
     # If you simply assign $script:VivantioPSConfig.URI.RPC, you will then directly modify the original
-    $uriBuilder = if ($APIType -eq 'API') {
+    $uriBuilder = if ($APIType -eq 'RPC') {
         [System.UriBuilder]::new($script:VivantioPSConfig.URI.RPC.ToString())
     } else {
         [System.UriBuilder]::new($script:VivantioPSConfig.URI.OData.ToString())
@@ -209,6 +209,23 @@ function CheckVivantioIsConnected {
 
 #endregion
 
+#region File Clear-VivantioAPIProxy.ps1
+
+
+function Clear-VivantioAPIProxy {
+    [CmdletBinding(ConfirmImpact = 'Medium', SupportsShouldProcess = $true)]
+    param
+    (
+        [switch]$Force
+    )
+    
+    if ($Force -or ($PSCmdlet.ShouldProcess('Vivantio API Proxy', 'Clear'))) {
+        $script:VivantioPSConfig['Proxy'] = $null
+    }
+}
+
+#endregion
+
 #region File Clear-VivantioCredential.ps1
 
 function Clear-VivantioCredential {
@@ -265,7 +282,7 @@ function Connect-VivantioAPI {
         
         [string]$ODataURI = 'https://neonet.vivantio.com/odata/',
         
-        [string]$APIURI = 'https://webservices-na01.vivantio.com/api/',
+        [string]$RPCURI = 'https://webservices-na01.vivantio.com/api/',
         
         [ValidateRange(1, 65535)]
         [ValidateNotNullOrEmpty()]
@@ -284,12 +301,12 @@ function Connect-VivantioAPI {
     }
     
     $null = Set-VivantioODataURI -URI $ODataURI
-    $null = Set-VivantioAPIURI -URI $APIURI
+    $null = Set-VivantioRPCURI -URI $RPCURI
     $null = Set-VivantioCredential -Credential $Credential
     $null = Set-VivantioTimeout -TimeoutSeconds $TimeoutSeconds
     
     try {
-        $null = VerifyAPIConnectivity -ErrorAction Stop
+        $null = VerifyRPCConnectivity -ErrorAction Stop
         $null = VerifyODataConnectivity -ErrorAction Stop
     } catch {
         Write-Verbose "Failed to connect. Generating error"
@@ -310,10 +327,42 @@ function Connect-VivantioAPI {
 
 #endregion
 
-#region File Get-VivantioCallerByOData.ps1
+#region File Get-VivantioCredential.ps1
+
+function Get-VivantioCredential {
+    [CmdletBinding()]
+    [OutputType([pscredential])]
+    param ()
+
+    if (-not $script:VivantioPSConfig.Credential) {
+        throw "Vivantio Credentials not set! You may set with Set-VivantioCredential"
+    }
+
+    $script:VivantioPSConfig.Credential
+}
+
+#endregion
+
+#region File Get-VivantioInvokeParams.ps1
+
+function Get-VivantioInvokeParams {
+    [CmdletBinding()]
+    param ()
+
+    Write-Verbose "Getting Vivantio InvokeParams"
+    if ($null -eq $script:VivantioPSConfig.InvokeParams) {
+        throw "Vivantio Invoke Params is not set! You may set it with Set-VivantioInvokeParams -InvokeParams ..."
+    }
+
+    $script:VivantioPSConfig.InvokeParams
+}
+
+#endregion
+
+#region File Get-VivantioODataCaller.ps1
 
 
-function Get-VivantioCallerByOData {
+function Get-VivantioODataCaller {
     [CmdletBinding()]
     [OutputType([pscustomobject])]
     param
@@ -382,38 +431,6 @@ function Get-VivantioCallerByOData {
     }
     
     $Callers
-}
-
-#endregion
-
-#region File Get-VivantioCredential.ps1
-
-function Get-VivantioCredential {
-    [CmdletBinding()]
-    [OutputType([pscredential])]
-    param ()
-
-    if (-not $script:VivantioPSConfig.Credential) {
-        throw "Vivantio Credentials not set! You may set with Set-VivantioCredential"
-    }
-
-    $script:VivantioPSConfig.Credential
-}
-
-#endregion
-
-#region File Get-VivantioInvokeParams.ps1
-
-function Get-VivantioInvokeParams {
-    [CmdletBinding()]
-    param ()
-
-    Write-Verbose "Getting Vivantio InvokeParams"
-    if ($null -eq $script:VivantioPSConfig.InvokeParams) {
-        throw "Vivantio Invoke Params is not set! You may set it with Set-VivantioInvokeParams -InvokeParams ..."
-    }
-
-    $script:VivantioPSConfig.InvokeParams
 }
 
 #endregion
@@ -577,43 +594,6 @@ function Get-VivantioRPCCaller {
 
 #endregion
 
-#region File Get-VivantioRPCCallerById.ps1
-
-function Get-VivantioRPCCallerById {
-    [CmdletBinding()]
-    param
-    (
-        [Parameter(ValueFromPipeline = $true,
-                   ValueFromPipelineByPropertyName = $true,
-                   Position = 0)]
-        [uint32[]]$Id,
-        
-        [switch]$Raw
-    )
-    
-    begin {
-        
-    }
-    
-    process {
-        foreach ($i in $Id) {
-            #$URIComponents = BuildURIComponents -URISegments $Segments -ParametersDictionary $PSBoundParameters
-            #$uri = BuildNewURI -Segments $URIComponents.Segments -Parameters $URIComponents.Parameters
-            
-            $Segments = [System.Collections.ArrayList]::new(@('Caller', 'SelectById', $i))
-            $uri = BuildNewURI -Segments $Segments
-            
-            InvokeVivantioRequest -URI $uri -Raw:$Raw -Method POST
-        }
-    }
-    
-    end {
-        
-    }
-}
-
-#endregion
-
 #region File Get-VivantioRPCClient.ps1
 
 
@@ -697,6 +677,7 @@ function Get-VivantioRPCClient {
 #region File Get-VivantioRPCData.ps1
 
 
+<#
 function Get-VivantioRPCData {
     [CmdletBinding()]
     param
@@ -757,19 +738,22 @@ function Get-VivantioRPCData {
         
     }
 }
+#>
+
+
 
 #endregion
 
 #region File Get-VivantioRPCURI.ps1
 
 
-function Get-VivantioAPIURI {
+function Get-VivantioRPCURI {
     [CmdletBinding()]
     param ()
     
-    Write-Verbose "Getting Vivantio API URI "
+    Write-Verbose "Getting Vivantio RPC URI "
     if ($null -eq $script:VivantioPSConfig.URI.RPC) {
-        throw "Vivantio API URI is not set! You may set it with Set-VivantioURI -URI 'https://hostname.domain.tld/path'"
+        throw "Vivantio RPC URI is not set! You may set it with Set-VivantioRPCURI -URI 'https://hostname.domain.tld/path'"
     }
     
     $script:VivantioPSConfig.URI.RPC
@@ -943,6 +927,7 @@ function InvokeVivantioRequest {
     }
     
     if ($null -ne $script:VivantioPSConfig.Proxy) {
+        Write-Verbose "Adding proxy '$($script:VivantioPSConfig.Proxy)' to request"
         $splat['Proxy'] = $script:VivantioPSConfig.Proxy
     }
     
@@ -1306,7 +1291,7 @@ function Set-VivantioODataURIScheme {
 #region File Set-VivantioRPCURI.ps1
 
 
-function Set-VivantioAPIURI {
+function Set-VivantioRPCURI {
     [CmdletBinding(ConfirmImpact = 'Low',
                    SupportsShouldProcess = $true)]
     [OutputType([System.UriBuilder])]
@@ -1320,9 +1305,9 @@ function Set-VivantioAPIURI {
     
     $uriBuilder = [System.UriBuilder]::new($URI)
     
-    if ($PSCmdlet.ShouldProcess('Vivantio API URI', 'Set')) {
+    if ($PSCmdlet.ShouldProcess('Vivantio RPC URI', 'Set')) {
         if ($uriBuilder.Scheme -ieq 'http') {
-            Write-Warning "Connecting to API via insecure HTTP is not recommended!"
+            Write-Warning "Connecting to RPC API via insecure HTTP is not recommended!"
         }
         
         $script:VivantioPSConfig.URI.RPC = $uriBuilder
@@ -1451,15 +1436,15 @@ function SetupVivantioConfigVariable {
 #region File VerifyAPIConnectivity.ps1
 
 
-function VerifyAPIConnectivity {
+function VerifyRPCConnectivity {
     [CmdletBinding()]
     param ()
     
-    Write-Verbose "Verifying API connectivity"
+    Write-Verbose "Verifying RPC API connectivity"
     
     $uriSegments = [System.Collections.ArrayList]::new(@('Caller', 'SelectById', '1'))
 
-    $uri = BuildNewURI -APIType API -Segments $uriSegments -SkipConnectedCheck
+    $uri = BuildNewURI -APIType RPC -Segments $uriSegments -SkipConnectedCheck
 
     InvokeVivantioRequest -URI $uri -Method POST -ErrorAction Stop
 }
