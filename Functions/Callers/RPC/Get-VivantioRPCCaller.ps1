@@ -1,5 +1,5 @@
 
-function Get-VivantioRPCClient {
+function Get-VivantioRPCCaller {
     [CmdletBinding(DefaultParameterSetName = 'SelectById')]
     param
     (
@@ -25,7 +25,7 @@ function Get-VivantioRPCClient {
     )
     
     begin {
-        $Segments = [System.Collections.ArrayList]::new(@('Client'))
+        $Segments = [System.Collections.ArrayList]::new(@('Caller'))
     }
     
     process {
@@ -52,13 +52,26 @@ function Get-VivantioRPCClient {
             }
             
             'SelectById' {
-                [void]$Segments.Add('SelectList')
+                $paramInvokeVivantioRequest = @{
+                    Raw = $Raw
+                    Method = 'POST'
+                }
                 
-                Write-Verbose "$(@($Value).Count) IDs to select"
-                $IDListJSON = ,@($Id) | ConvertTo-Json -Compress
-                $uri = BuildNewURI -Segments $Segments
+                if (@($Id).Count -eq 1) {
+                    Write-Verbose "Single ID"
+                    [void]$Segments.Add('SelectById')
+                    [void]$Segments.Add($Id)
+                } else {
+                    [void]$Segments.Add('SelectList')
+                    
+                    Write-Verbose "$(@($Value).Count) IDs to select"
+                    $paramInvokeVivantioRequest['Body'] = ,@($Id) | ConvertTo-Json -Compress
+                    $paramInvokeVivantioRequest['BodyIsJSON'] = $true
+                }
                 
-                InvokeVivantioRequest -URI $uri -Body $IDListJSON -BodyIsJSON -Raw:$Raw -Method POST
+                $paramInvokeVivantioRequest['Uri'] = BuildNewURI -Segments $Segments
+                
+                InvokeVivantioRequest @paramInvokeVivantioRequest
                 
                 break
             }

@@ -484,6 +484,99 @@ function Get-VivantioODataURIScheme {
 
 #endregion
 
+#region File Get-VivantioRPCCaller.ps1
+
+
+function Get-VivantioRPCCaller {
+    [CmdletBinding(DefaultParameterSetName = 'SelectById')]
+    param
+    (
+        [Parameter(ParameterSetName = 'Select',
+                   Mandatory = $true)]
+        [object]$Query,
+        
+        [Parameter(ParameterSetName = 'SelectById',
+                   Mandatory = $true,
+                   ValueFromPipeline = $true,
+                   ValueFromPipelineByPropertyName = $true)]
+        [uint64[]]$Id,
+        
+        [Parameter(ParameterSetName = 'SelectByQueue',
+                   Mandatory = $true)]
+        [object]$Queue,
+        
+        [Parameter(ParameterSetName = 'SelectPage',
+                   Mandatory = $true)]
+        [hashtable]$Page,
+        
+        [switch]$Raw
+    )
+    
+    begin {
+        $Segments = [System.Collections.ArrayList]::new(@('Caller'))
+    }
+    
+    process {
+        switch ($PSCmdlet.ParameterSetName) {
+            'Select' {
+                [void]$Segments.Add($_)
+                
+                $uri = BuildNewURI -Segments $Segments
+                
+                $paramInvokeVivantioRequest = @{
+                    URI    = $uri
+                    Body   = $Query
+                    Raw    = $Raw
+                    Method = 'POST'
+                }
+                
+                if ($Query -is [System.String]) {
+                    $paramInvokeVivantioRequest['BodyIsJSON'] = $true
+                }
+                
+                InvokeVivantioRequest @paramInvokeVivantioRequest
+                
+                break
+            }
+            
+            'SelectById' {
+                $paramInvokeVivantioRequest = @{
+                    Raw = $Raw
+                    Method = 'POST'
+                }
+                
+                if (@($Id).Count -eq 1) {
+                    Write-Verbose "Single ID"
+                    [void]$Segments.Add('SelectById')
+                    [void]$Segments.Add($Id)
+                } else {
+                    [void]$Segments.Add('SelectList')
+                    
+                    Write-Verbose "$(@($Value).Count) IDs to select"
+                    $paramInvokeVivantioRequest['Body'] = ,@($Id) | ConvertTo-Json -Compress
+                    $paramInvokeVivantioRequest['BodyIsJSON'] = $true
+                }
+                
+                $paramInvokeVivantioRequest['Uri'] = BuildNewURI -Segments $Segments
+                
+                InvokeVivantioRequest @paramInvokeVivantioRequest
+                
+                break
+            }
+            
+            default {
+                throw "'$_' NOT IMPLEMENTED"
+            }
+        }
+    }
+    
+    end {
+        
+    }
+}
+
+#endregion
+
 #region File Get-VivantioRPCCallerById.ps1
 
 function Get-VivantioRPCCallerById {
@@ -528,16 +621,14 @@ function Get-VivantioRPCClient {
     [CmdletBinding(DefaultParameterSetName = 'SelectById')]
     param
     (
-        [Parameter(Mandatory = $false)]
-        [ValidateSet('Select', 'SelectById', 'SelectByQueue', 'SelectPage', IgnoreCase = $true)]
-        [string]$Method = 'SelectById',
-        
         [Parameter(ParameterSetName = 'Select',
                    Mandatory = $true)]
-        [hashtable]$Query,
+        [object]$Query,
         
         [Parameter(ParameterSetName = 'SelectById',
-                   Mandatory = $true)]
+                   Mandatory = $true,
+                   ValueFromPipeline = $true,
+                   ValueFromPipelineByPropertyName = $true)]
         [uint64[]]$Id,
         
         [Parameter(ParameterSetName = 'SelectByQueue',
@@ -556,36 +647,24 @@ function Get-VivantioRPCClient {
     }
     
     process {
-        switch ($Method) {
+        switch ($PSCmdlet.ParameterSetName) {
             'Select' {
-                throw "'SELECT' NOT IMPLEMENTED"
-                [void]$Segments.Add($Method)
+                [void]$Segments.Add($_)
                 
-                break
-            }
-            
-            'SelectByIdOld' {
-                [void]$Segments.Add('SelectById')
-                [void]$Segments.Add(':id') # Placeholder to edit later
+                $uri = BuildNewURI -Segments $Segments
                 
-                Write-Verbose "$(@($Value).Count) IDs to select"
-                
-                foreach ($v in $Value) {
-                    $Id = $null
-                    
-                    if (-not [uint64]::TryParse($v, [ref]$Id)) {
-                        Write-Error -Exception ([System.Exception]::new("[$v] from provided Value array is not a valid uint64 value")) -Category InvalidType -TargetObject $v
-                        continue
-                    }
-                    
-                    Write-Verbose "Selecting by Id '$Id'"
-                    
-                    $Segments[-1] = $Id
-                    
-                    $uri = BuildNewURI -Segments $Segments
-                    
-                    InvokeVivantioRequest -URI $uri -Raw:$Raw -Method POST
+                $paramInvokeVivantioRequest = @{
+                    URI    = $uri
+                    Body   = $Query
+                    Raw    = $Raw
+                    Method = 'POST'
                 }
+                
+                if ($Query -is [System.String]) {
+                    $paramInvokeVivantioRequest['BodyIsJSON'] = $true
+                }
+                
+                InvokeVivantioRequest @paramInvokeVivantioRequest
                 
                 break
             }
@@ -594,11 +673,10 @@ function Get-VivantioRPCClient {
                 [void]$Segments.Add('SelectList')
                 
                 Write-Verbose "$(@($Value).Count) IDs to select"
-                
                 $IDListJSON = ,@($Id) | ConvertTo-Json -Compress
                 $uri = BuildNewURI -Segments $Segments
                 
-                InvokeVivantioRequest -URI $uri -Body $IDListJSON -Raw:$Raw -Method POST
+                InvokeVivantioRequest -URI $uri -Body $IDListJSON -BodyIsJSON -Raw:$Raw -Method POST
                 
                 break
             }
@@ -606,46 +684,6 @@ function Get-VivantioRPCClient {
             default {
                 throw "'$_' NOT IMPLEMENTED"
             }
-        }
-    }
-    
-    end {
-        
-    }
-}
-
-#endregion
-
-#region File Get-VivantioRPCClientById.ps1
-
-
-function Get-VivantioRPCClientById {
-    [CmdletBinding()]
-    param
-    (
-        [Parameter(ValueFromPipeline = $true,
-                   ValueFromPipelineByPropertyName = $true,
-                   Position = 0)]
-        [uint32[]]$Id,
-        
-        [switch]$Raw
-    )
-    
-    begin {
-        $Segments = [System.Collections.ArrayList]::new(@('Client', 'SelectById', $i))
-    }
-    
-    process {
-        foreach ($i in $Id) {
-            #$URIComponents = BuildURIComponents -URISegments $Segments -ParametersDictionary $PSBoundParameters
-            #$uri = BuildNewURI -Segments $URIComponents.Segments -Parameters $URIComponents.Parameters
-            
-            $Segments[-1] = $i
-            $uri = BuildNewURI -Segments $Segments
-            
-            InvokeVivantioRequest -URI $uri -Raw:$Raw -Method POST
-            
-            #Get-VivantioRPCData -Endpoint 'Client' -Method 'SelectById' -Value $i -Raw:$Raw
         }
     }
     
@@ -862,35 +900,50 @@ function InvokeVivantioRequest {
     (
         [Parameter(Mandatory = $true)]
         [System.UriBuilder]$URI,
-
-        [Hashtable]$Headers = @{},
-
-        [pscustomobject]$Body,
-
+        
+        [Hashtable]$Headers = @{
+        },
+        
+        [object]$Body,
+        
+        [switch]$BodyIsJSON,
+        
         [ValidateRange(1, 65535)]
         [uint16]$Timeout = (Get-VivantioTimeout),
-
+        
         [ValidateSet('GET', 'PATCH', 'PUT', 'POST', 'DELETE', 'OPTIONS', IgnoreCase = $true)]
         [string]$Method = 'GET',
-
+        
         [switch]$Raw
     )
-
+    
     $Headers['Authorization'] = GetHTTPBasicAuthorizationString -Credential (Get-VivantioCredential)
-
+    
     $splat = @{
-        'Method'      = $Method
-        'Uri'         = $URI.Uri.AbsoluteUri # This property auto generates the scheme, hostname, path, and query
-        'Headers'     = $Headers
-        'TimeoutSec'  = $Timeout
+        'Method' = $Method
+        'Uri'    = $URI.Uri.AbsoluteUri # This property auto generates the scheme, hostname, path, and query
+        'Headers' = $Headers
+        'TimeoutSec' = $Timeout
         'ErrorAction' = 'Stop'
-        'Verbose'     = $VerbosePreference
+        'Verbose' = $VerbosePreference
     }
-
+    
     if ($PSBoundParameters.ContainsKey('Body')) {
-        Write-Verbose "BODY: $($Body | ConvertTo-Json -Compress)"
-        $splat['Body'] = ($Body | ConvertTo-Json -Compress)
+        if (-not $BodyIsJSON) {
+            # Provided body object is NOT JSON yet, convert it
+            Write-Verbose "BODY: $($Body | ConvertTo-Json -Compress -Depth 100)"
+            $splat['Body'] = ($Body | ConvertTo-Json -Compress -Depth 100)
+        } else {
+            # Provided body is already JSON, add it as-is
+            Write-Verbose "BODY: $Body"
+            $splat['Body'] = $Body
+        }
+        
         $splat['ContentType'] = 'application/json'
+    }
+    
+    if ($null -ne $script:VivantioPSConfig.Proxy) {
+        $splat['Proxy'] = $script:VivantioPSConfig.Proxy
     }
     
     try {
@@ -899,9 +952,9 @@ function InvokeVivantioRequest {
     } catch {
         throw $_
     }
-
+    
     #region TODO: Handle errors a little more gracefully...
-
+    
     <#
     try {
         Write-Verbose "Sending request..."
@@ -932,9 +985,9 @@ function InvokeVivantioRequest {
         throw $myError.detail
     }
     #>
-
+    
     #endregion TODO: Handle errors a little more gracefully...
-
+    
     # If the user wants the raw value from the API... otherwise return only the actual result
     if ($Raw) {
         Write-Verbose "Returning raw result by choice"
@@ -946,6 +999,9 @@ function InvokeVivantioRequest {
         } elseif ($result.psobject.Properties.Name.Contains('value')) {
             Write-Verbose "Found 'value' property on data, returning 'value' directly"
             return $result.value
+        } elseif ($result.psobject.Properties.Name.Contains('Results')) {
+            Write-Verbose "Found 'Results' property on data, returning 'Results' directly"
+            return $result.Results
         } else {
             Write-Verbose "Did NOT find 'item' or 'value' property on data, returning raw result"
             return $result
@@ -992,6 +1048,122 @@ function New-VivantioODataFilter {
         "{0} '{1}'" -f $baseString, $Value
     } else {
         "{0} {1}" -f $baseString, $Value
+    }
+}
+
+#endregion
+
+#region File New-VivantioRPCQuery.ps1
+
+
+function New-VivantioRPCQuery {
+<#
+    .SYNOPSIS
+        A brief description of the New-VivantioAPIQuery function.
+    
+    .DESCRIPTION
+        A detailed description of the New-VivantioAPIQuery function.
+    
+    .PARAMETER Mode
+        [VivantioQueryMode]$Mode,
+    
+    .PARAMETER Items
+        A description of the Items parameter.
+    
+    .PARAMETER JSON
+        A description of the JSON parameter.
+    
+    .EXAMPLE
+        		PS C:\> New-VivantioAPIQuery -Mode 'MatchAll' -Items $value2
+    
+    .OUTPUTS
+        pscustomobject, string
+    
+    .NOTES
+        Additional information about the function.
+#>
+    
+    [CmdletBinding(DefaultParameterSetName = 'Default')]
+    [OutputType([pscustomobject], ParameterSetName = 'Default')]
+    [OutputType([string], ParameterSetName = 'JSON')]
+    param
+    (
+        [Parameter(ParameterSetName = 'Default',
+                   Mandatory = $true,
+                   Position = 0)]
+        [ValidateSet('MatchAll', 'MatchAny', 'MatchNone', IgnoreCase = $true)]
+        [string]$Mode = 'MatchAll',
+        
+        [Parameter(ParameterSetName = 'Default',
+                   Mandatory = $true,
+                   Position = 1)]
+        [pscustomobject[]]$Items,
+        
+        [Parameter(ParameterSetName = 'JSON')]
+        [string]$JSON
+    )
+    
+    switch ($PSCmdlet.ParameterSetName) {
+        "Default" {
+            [pscustomobject]@{
+                "Query" = [pscustomobject]@{
+                    'Mode'  = $Mode
+                    'Items' = $Items
+                }
+            }
+        }
+    }
+}
+
+#endregion
+
+#region File New-VivantioRPCQueryItem.ps1
+
+
+function New-VivantioRPCQueryItem {
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true,
+                   Position = 0)]
+        [string]$FieldName,
+        
+        [Parameter(Mandatory = $true,
+                   Position = 1)]
+        [ValidateSet('Equals', 'DoesNotEqual', 'GreaterThan', 'GreaterThanOrEqualTo', 'LessThan', 'LessThanOrEqualTo', 'Like', IgnoreCase = $true)]
+        [string]$Operator,
+        
+        [Parameter(Mandatory = $true,
+                   Position = 2)]
+        [string]$Value
+    )
+    
+    [pscustomobject]@{
+        'FieldName' = $FieldName
+        'Op'        = $Operator
+        'Value'     = $Value
+    }
+}
+
+#endregion
+
+#region File Set-VivantioAPIProxy.ps1
+
+
+function Set-VivantioAPIProxy {
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [AllowNull()]
+        [AllowEmptyString()]
+        [string]$ProxyURI
+    )
+    
+    if ([string]::IsNullOrWhiteSpace($ProxyURI)) {
+        $script:VivantioPSConfig['Proxy'] = $null
+    } else {
+        $script:VivantioPSConfig['Proxy'] = $ProxyURI
     }
 }
 

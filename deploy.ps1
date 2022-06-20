@@ -130,6 +130,11 @@ if (Test-Path $StandalonePath) {
     Write-Warning "Standalone path at [$StandalonePath] not found"
 }
 
+#Write-Host " Adding classes/enums"
+#. "$PSScriptRoot\BuildCustomClasses.ps1"
+#
+#Get-Content $ConcatenatedClassesFile | Out-File -FilePath $ConcatenatedFilePath -Encoding utf8 -Append
+
 
 Write-Host " Adding psm1"
 Get-Content "$PSScriptRoot\$ModuleName.psm1" | Out-File -FilePath $ConcatenatedFilePath -Encoding UTF8 -Append

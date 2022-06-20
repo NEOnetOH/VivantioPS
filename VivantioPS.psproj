@@ -13,6 +13,10 @@
     <Folder>Functions\Clients</Folder>
     <Folder>Functions\Clients\RPC</Folder>
     <Folder>Functions\RPC</Folder>
+    <Folder>Classes</Folder>
+    <Folder>Functions\Query</Folder>
+    <Folder>Deployment</Folder>
+    <Folder>Enums</Folder>
   </Folders>
   <Files>
     <File Build="2">VivantioPS.psd1</File>
@@ -54,9 +58,17 @@
     <File Build="0" Shared="True" ReferenceFunction="Invoke-GetHTTPBasicAuthorizationString_ps1" ExportFunctions="True">Functions\Helpers\GetHTTPBasicAuthorizationString.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-VerifyODataConnectivity_ps1" ExportFunctions="False">Functions\Setup\Support\VerifyODataConnectivity.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-New-VivantioODataFilter_ps1" ExportFunctions="True">Functions\Callers\OData\New-VivantioODataFilter.ps1</File>
-    <File Build="2" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCClientById_ps1" ExportFunctions="False">Functions\Clients\RPC\Get-VivantioRPCClientById.ps1</File>
     <File Build="2" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCData_ps1" ExportFunctions="False">Functions\RPC\Get-VivantioRPCData.ps1</File>
     <File Build="2" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCClient_ps1" ExportFunctions="False">Functions\Clients\RPC\Get-VivantioRPCClient.ps1</File>
+    <File Build="2" Shared="True" ReferenceFunction="Invoke-Set-VivantioAPIProxy_ps1" ExportFunctions="False">Functions\Setup\Set-VivantioAPIProxy.ps1</File>
+    <File Build="2" Shared="True" ReferenceFunction="Invoke-VivantioQuery_Class_ps1" ExportFunctions="True">Classes\VivantioQuery.Class.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-VivantioQueryItem_Class_ps1" ExportFunctions="True">Classes\VivantioQueryItem.Class.ps1</File>
+    <File Build="2" Shared="True" ReferenceFunction="Invoke-New-VivantioRPCQueryItem_ps1" ExportFunctions="False">Functions\Query\New-VivantioRPCQueryItem.ps1</File>
+    <File Build="2" Shared="True" ReferenceFunction="Invoke-New-VivantioRPCQuery_ps1" ExportFunctions="False">Functions\Query\New-VivantioRPCQuery.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-VivantioQueryOperator_Enum_ps1" ExportFunctions="True">Enums\VivantioQueryOperator.Enum.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-VivantioQueryMode_Enum_ps1" ExportFunctions="True">Enums\VivantioQueryMode.Enum.ps1</File>
+    <File Build="2" Shared="True" ReferenceFunction="Invoke-BuildCustomClasses_ps1" ExportFunctions="False">BuildCustomClasses.ps1</File>
+    <File Build="2" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCCaller_ps1" ExportFunctions="False">Functions\Callers\RPC\Get-VivantioRPCCaller.ps1</File>
   </Files>
   <StartupScript>Test-Module.ps1</StartupScript>
 </Project>
