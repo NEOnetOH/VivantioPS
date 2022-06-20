@@ -280,9 +280,9 @@ function Connect-VivantioAPI {
         [Parameter(Mandatory = $false)]
         [pscredential]$Credential,
         
-        [string]$ODataURI = 'https://neonet.vivantio.com/odata/',
+        [string]$ODataURI,
         
-        [string]$RPCURI = 'https://webservices-na01.vivantio.com/api/',
+        [string]$RPCURI,
         
         [ValidateRange(1, 65535)]
         [ValidateNotNullOrEmpty()]
