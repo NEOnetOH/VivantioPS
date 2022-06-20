@@ -59,8 +59,7 @@ function Get-VivantioRPCCaller {
                 
                 if (@($Id).Count -eq 1) {
                     Write-Verbose "Single ID"
-                    [void]$Segments.Add('SelectById')
-                    [void]$Segments.Add($Id)
+                    [void]$Segments.AddRange(@('SelectById', $Id))
                 } else {
                     [void]$Segments.Add('SelectList')
                     

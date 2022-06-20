@@ -209,6 +209,22 @@ function CheckVivantioIsConnected {
 
 #endregion
 
+#region File Clear-VivantioAPICredential.ps1
+
+function Clear-VivantioAPICredential {
+    [CmdletBinding(ConfirmImpact = 'Medium', SupportsShouldProcess = $true)]
+    param
+    (
+        [switch]$Force
+    )
+    
+    if ($Force -or ($PSCmdlet.ShouldProcess('Vivantio Credentials', 'Clear'))) {
+        $script:VivantioPSConfig['Credential'] = $null
+    }
+}
+
+#endregion
+
 #region File Clear-VivantioAPIProxy.ps1
 
 
@@ -221,22 +237,6 @@ function Clear-VivantioAPIProxy {
     
     if ($Force -or ($PSCmdlet.ShouldProcess('Vivantio API Proxy', 'Clear'))) {
         $script:VivantioPSConfig['Proxy'] = $null
-    }
-}
-
-#endregion
-
-#region File Clear-VivantioCredential.ps1
-
-function Clear-VivantioCredential {
-    [CmdletBinding(ConfirmImpact = 'Medium', SupportsShouldProcess = $true)]
-    param
-    (
-        [switch]$Force
-    )
-    
-    if ($Force -or ($PSCmdlet.ShouldProcess('Vivantio Credentials', 'Clear'))) {
-        $script:VivantioPSConfig['Credential'] = $null
     }
 }
 
@@ -291,7 +291,7 @@ function Connect-VivantioAPI {
     
     if (-not $Credential) {
         try {
-            $Credential = Get-VivantioCredential -ErrorAction Stop
+            $Credential = Get-VivantioAPICredential -ErrorAction Stop
         } catch {
             # Credentials are not set... Try to obtain from the user
             if (-not ($Credential = Get-Credential -Message "Enter credentials for Vivantio")) {
@@ -302,8 +302,8 @@ function Connect-VivantioAPI {
     
     $null = Set-VivantioODataURI -URI $ODataURI
     $null = Set-VivantioRPCURI -URI $RPCURI
-    $null = Set-VivantioCredential -Credential $Credential
-    $null = Set-VivantioTimeout -TimeoutSeconds $TimeoutSeconds
+    $null = Set-VivantioAPICredential -Credential $Credential
+    $null = Set-VivantioAPITimeout -TimeoutSeconds $TimeoutSeconds
     
     try {
         $null = VerifyRPCConnectivity -ErrorAction Stop
@@ -327,9 +327,9 @@ function Connect-VivantioAPI {
 
 #endregion
 
-#region File Get-VivantioCredential.ps1
+#region File Get-VivantioAPICredential.ps1
 
-function Get-VivantioCredential {
+function Get-VivantioAPICredential {
     [CmdletBinding()]
     [OutputType([pscredential])]
     param ()
@@ -343,18 +343,20 @@ function Get-VivantioCredential {
 
 #endregion
 
-#region File Get-VivantioInvokeParams.ps1
+#region File Get-VivantioAPITimeout.ps1
 
-function Get-VivantioInvokeParams {
+
+function Get-VivantioAPITimeout {
     [CmdletBinding()]
+    [OutputType([uint16])]
     param ()
 
-    Write-Verbose "Getting Vivantio InvokeParams"
-    if ($null -eq $script:VivantioPSConfig.InvokeParams) {
-        throw "Vivantio Invoke Params is not set! You may set it with Set-VivantioInvokeParams -InvokeParams ..."
+    Write-Verbose "Getting Vivantio Timeout"
+    if ($null -eq $script:VivantioPSConfig.Timeout) {
+        throw "Vivantio Timeout is not set! You may set it with Set-VivantioTimeout -TimeoutSeconds [uint16]"
     }
 
-    $script:VivantioPSConfig.InvokeParams
+    $script:VivantioPSConfig.Timeout
 }
 
 #endregion
@@ -393,7 +395,7 @@ function Get-VivantioODataCaller {
 #    $URIComponents = BuildURIComponents -URISegments $Segments -ParametersDictionary $PSBoundParameters
 #    $uri = BuildNewURI -Segments $URIComponents.Segments -Parameters $URIComponents.Parameters
     
-    $RawData = InvokeVivantioRequest -URI $uri -Raw:$Raw
+    $RawData = InvokeVivantioRequest -URI $uri -Raw -ErrorAction Stop
     
     $Callers = [pscustomobject]@{
         'TotalCallers' = $RawData.'@odata.count'
@@ -419,14 +421,24 @@ function Get-VivantioODataCaller {
             $Callers.NumRequests++
         }
         
+        Write-Verbose "Need to make $($Callers.NumRequests - 1) more requests"
+        
         for ($RequestCounter = 1; $RequestCounter -lt $Callers.NumRequests; $RequestCounter++) {
-            Write-Verbose "Request $RequestCounter of $($Callers.NumRequests)"
+            $PercentComplete = (($RequestCounter/$Callers.NumRequests) * 100)
+            $paramWriteProgress = @{
+                Id              = 1
+                Activity        = "Obtaining Callers"
+                Status          = "Request {0} of {1} ({2:N2}% Complete)" -f $RequestCounter, $Callers.NumRequests, $PercentComplete
+                PercentComplete = $PercentComplete
+            }
+            
+            Write-Progress @paramWriteProgress
             
             $Parameters['$skip'] = ($RequestCounter * 100)
             
             $uri = BuildNewURI -APIType OData -Segments $Segments -Parameters $Parameters
             
-            $Callers.value.AddRange((InvokeVivantioRequest -URI $uri -Raw:$Raw).value)
+            $Callers.value.AddRange((InvokeVivantioRequest -URI $uri -Raw).value)
         }
     }
     
@@ -564,8 +576,7 @@ function Get-VivantioRPCCaller {
                 
                 if (@($Id).Count -eq 1) {
                     Write-Verbose "Single ID"
-                    [void]$Segments.Add('SelectById')
-                    [void]$Segments.Add($Id)
+                    [void]$Segments.AddRange(@('SelectById', $Id))
                 } else {
                     [void]$Segments.Add('SelectList')
                     
@@ -674,60 +685,46 @@ function Get-VivantioRPCClient {
 
 #endregion
 
-#region File Get-VivantioRPCData.ps1
+#region File Get-VivantioRPCCustomFormDefinition.ps1
 
 
-<#
-function Get-VivantioRPCData {
-    [CmdletBinding()]
+function Get-VivantioRPCCustomFormDefinition {
+    [CmdletBinding(DefaultParameterSetName = 'ById')]
     param
     (
-        [Parameter(Mandatory = $true)]
-        [ValidateSet('Article', 'Asset', 'Caller', 'Client', 'Entity', 'Location', 'Ticket', IgnoreCase = $true)]
-        [string]$Endpoint,
+        [Parameter(ParameterSetName = 'ById',
+                   Mandatory = $true)]
+        [uint64]$Id,
         
-        [Parameter(Mandatory = $false)]
-        [ValidateSet('Select', 'SelectById', 'SelectByQueue', 'SelectList', 'SelectPage', IgnoreCase = $true)]
-        [string]$Method = 'SelectById',
-        
-        [Parameter(Mandatory = $true)]
-        [string[]]$Value,
+        [Parameter(ParameterSetName = 'ByRecordTypeId',
+                   Mandatory = $true)]
+        [uint64]$RecordTypeId,
         
         [switch]$Raw
     )
     
     begin {
-        $Segments = [System.Collections.ArrayList]::new(@($Endpoint, $Method))
+        $Segments = [System.Collections.ArrayList]::new(@('Entity'))
     }
     
     process {
-        switch ($Method) {
-            'Select' {
+        switch ($PsCmdlet.ParameterSetName) {
+            'ById' {
+                [void]$Segments.AddRange(@('CustomEntityDefinitionSelectById', $Id))
+                
+                $uri = BuildNewURI -Segments $Segments
+                
+                InvokeVivantioRequest -URI $uri -Method POST -Raw:$Raw
                 
                 break
             }
             
-            'SelectById' {
-                [void]$Segments.Add(':id')
+            'ByRecordTypeId' {
+                [void]$Segments.Add('CustomEntityDefinitionSelectByRecordTypeId')
                 
-                Write-Verbose "$(@($Value).Count) IDs to select"
+                $uri = BuildNewURI -Segments $Segments
                 
-                foreach ($v in $Value) {
-                    $Id = $null
-                    
-                    if (-not [uint64]::TryParse($v, [ref]$Id)) {
-                        Write-Error -Exception ([System.Exception]::new("[$v] from provided Value array is not a valid uint64 value")) -Category InvalidType -TargetObject $v
-                        continue
-                    }
-                    
-                    Write-Verbose "Selecting by Id '$Id'"
-                    
-                    $Segments[-1] = $Id
-                    
-                    $uri = BuildNewURI -Segments $Segments
-                    
-                    InvokeVivantioRequest -URI $uri -Raw:$Raw -Method POST
-                }
+                InvokeVivantioRequest -URI $uri -Body @{'Id' = $RecordTypeId} -Method POST
                 
                 break
             }
@@ -738,9 +735,114 @@ function Get-VivantioRPCData {
         
     }
 }
-#>
+
+#endregion
+
+#region File Get-VivantioRPCCustomFormFieldDefinition.ps1
 
 
+function Get-VivantioRPCCustomFormFieldDefinition {
+    [CmdletBinding(DefaultParameterSetName = 'ById')]
+    param
+    (
+        [Parameter(ParameterSetName = 'ById',
+                   Mandatory = $true)]
+        [uint64]$Id,
+        
+        [switch]$Raw
+    )
+    
+    begin {
+        $Segments = [System.Collections.ArrayList]::new(@('Entity'))
+    }
+    
+    process {
+        [void]$Segments.AddRange(@('CustomEntityFieldDefinitionSelectById', $Id))
+        
+        $uri = BuildNewURI -Segments $Segments
+        
+        InvokeVivantioRequest -URI $uri -Method POST -Raw:$Raw
+        
+        break
+    }
+    
+    end {
+        
+    }
+}
+
+#endregion
+
+#region File Get-VivantioRPCCustomFormInstance.ps1
+
+
+function Get-VivantioRPCCustomFormInstance {
+    [CmdletBinding(DefaultParameterSetName = 'ById')]
+    param
+    (
+        [Parameter(ParameterSetName = 'ById',
+                   Mandatory = $true)]
+        [uint64]$Id,
+        
+        [Parameter(ParameterSetName = 'ByTypeIdAndParent',
+                   Mandatory = $true)]
+        [uint64]$TypeId,
+        
+        [Parameter(ParameterSetName = 'ByTypeIdAndParent',
+                   Mandatory = $true)]
+        [uint64]$ParentId,
+        
+        [Parameter(ParameterSetName = 'ByTypeIdAndParent',
+                   Mandatory = $true)]
+        [ValidateSet('Client', 'Location', 'Caller', 'Ticket', 'Asset', 'Article', IgnoreCase = $true)]
+        [string]$SystemArea,
+        
+        [Parameter(ParameterSetName = 'ByTypeIdAndParent')]
+        [switch]$Simplified,
+        
+        [switch]$Raw
+    )
+    
+    begin {
+        $Segments = [System.Collections.ArrayList]::new(@('Entity'))
+    }
+    
+    process {
+        switch ($PsCmdlet.ParameterSetName) {
+            'ById' {
+                [void]$Segments.AddRange(@('CustomEntitySelectById', $Id))
+                
+                $uri = BuildNewURI -Segments $Segments
+                
+                InvokeVivantioRequest -URI $uri -Method POST -Raw:$Raw
+                
+                break
+            }
+            
+            'ByTypeIdAndParent' {
+                if ($Simplified) {
+                    [void]$Segments.Add('CustomEntitySimplifiedSelectByTypeIdAndParent')
+                } else {
+                    [void]$Segments.Add('CustomEntitySelectByTypeIdAndParent')
+                }
+                
+                $uri = BuildNewURI -Segments $Segments
+                
+                InvokeVivantioRequest -URI $uri -Body @{
+                    'TypeId'     = $TypeId
+                    'ParentId'   = $ParentId
+                    'SystemArea' = $SystemArea
+                } -Method POST -Raw:$Raw
+                
+                break
+            }
+        }
+    }
+    
+    end {
+        
+    }
+}
 
 #endregion
 
@@ -805,24 +907,6 @@ function Get-VivantioAPIURIScheme {
     }
 
     $script:VivantioPSConfig.URI.RPC.Scheme
-}
-
-#endregion
-
-#region File Get-VivantioTimeout.ps1
-
-
-function Get-VivantioTimeout {
-    [CmdletBinding()]
-    [OutputType([uint16])]
-    param ()
-
-    Write-Verbose "Getting Vivantio Timeout"
-    if ($null -eq $script:VivantioPSConfig.Timeout) {
-        throw "Vivantio Timeout is not set! You may set it with Set-VivantioTimeout -TimeoutSeconds [uint16]"
-    }
-
-    $script:VivantioPSConfig.Timeout
 }
 
 #endregion
@@ -893,7 +977,7 @@ function InvokeVivantioRequest {
         [switch]$BodyIsJSON,
         
         [ValidateRange(1, 65535)]
-        [uint16]$Timeout = (Get-VivantioTimeout),
+        [uint16]$Timeout = (Get-VivantioAPITimeout),
         
         [ValidateSet('GET', 'PATCH', 'PUT', 'POST', 'DELETE', 'OPTIONS', IgnoreCase = $true)]
         [string]$Method = 'GET',
@@ -901,7 +985,7 @@ function InvokeVivantioRequest {
         [switch]$Raw
     )
     
-    $Headers['Authorization'] = GetHTTPBasicAuthorizationString -Credential (Get-VivantioCredential)
+    $Headers['Authorization'] = GetHTTPBasicAuthorizationString -Credential (Get-VivantioAPICredential)
     
     $splat = @{
         'Method' = $Method
@@ -1132,31 +1216,9 @@ function New-VivantioRPCQueryItem {
 
 #endregion
 
-#region File Set-VivantioAPIProxy.ps1
+#region File Set-VivantioAPICredential.ps1
 
-
-function Set-VivantioAPIProxy {
-    [CmdletBinding()]
-    param
-    (
-        [Parameter(Mandatory = $true)]
-        [AllowNull()]
-        [AllowEmptyString()]
-        [string]$ProxyURI
-    )
-    
-    if ([string]::IsNullOrWhiteSpace($ProxyURI)) {
-        $script:VivantioPSConfig['Proxy'] = $null
-    } else {
-        $script:VivantioPSConfig['Proxy'] = $ProxyURI
-    }
-}
-
-#endregion
-
-#region File Set-VivantioCredential.ps1
-
-function Set-VivantioCredential {
+function Set-VivantioAPICredential {
     [CmdletBinding(DefaultParameterSetName = 'CredsObject',
         ConfirmImpact = 'Low',
         SupportsShouldProcess = $true)]
@@ -1186,6 +1248,50 @@ function Set-VivantioCredential {
         }
 
         $script:VivantioPSConfig['Credential']
+    }
+}
+
+#endregion
+
+#region File Set-VivantioAPIProxy.ps1
+
+
+function Set-VivantioAPIProxy {
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [AllowNull()]
+        [AllowEmptyString()]
+        [string]$ProxyURI
+    )
+    
+    if ([string]::IsNullOrWhiteSpace($ProxyURI)) {
+        $script:VivantioPSConfig['Proxy'] = $null
+    } else {
+        $script:VivantioPSConfig['Proxy'] = $ProxyURI
+    }
+}
+
+#endregion
+
+#region File Set-VivantioAPITimeout.ps1
+
+
+function Set-VivantioAPITimeout {
+    [CmdletBinding(ConfirmImpact = 'Low',
+                   SupportsShouldProcess = $true)]
+    [OutputType([uint16])]
+    param
+    (
+        [Parameter(Mandatory = $false)]
+        [ValidateRange(1, 65535)]
+        [uint16]$TimeoutSeconds = 30
+    )
+
+    if ($PSCmdlet.ShouldProcess('Vivantio Timeout', 'Set')) {
+        $script:VivantioPSConfig.Timeout = $TimeoutSeconds
+        $script:VivantioPSConfig.Timeout
     }
 }
 
@@ -1385,28 +1491,6 @@ function Set-VivantioAPIURIScheme {
 
 #endregion
 
-#region File Set-VivantioTimeout.ps1
-
-
-function Set-VivantioTimeout {
-    [CmdletBinding(ConfirmImpact = 'Low',
-                   SupportsShouldProcess = $true)]
-    [OutputType([uint16])]
-    param
-    (
-        [Parameter(Mandatory = $false)]
-        [ValidateRange(1, 65535)]
-        [uint16]$TimeoutSeconds = 30
-    )
-
-    if ($PSCmdlet.ShouldProcess('Vivantio Timeout', 'Set')) {
-        $script:VivantioPSConfig.Timeout = $TimeoutSeconds
-        $script:VivantioPSConfig.Timeout
-    }
-}
-
-#endregion
-
 #region File SetupVivantioConfigVariable.ps1
 
 function SetupVivantioConfigVariable {
@@ -1421,6 +1505,7 @@ function SetupVivantioConfigVariable {
         Write-Verbose "Creating VivantioConfig hashtable"
         $script:VivantioPSConfig = @{
             'Connected' = $false
+            'ConnectedTimestamp' = $null
             'URI'       = [pscustomobject]@{
                 'RPC' = [System.UriBuilder]::new()
                 'OData' = [System.UriBuilder]::new()
@@ -1429,24 +1514,6 @@ function SetupVivantioConfigVariable {
     } else {
         Write-Warning "Cannot overwrite VivantioConfig without -Overwrite parameter!"
     }
-}
-
-#endregion
-
-#region File VerifyAPIConnectivity.ps1
-
-
-function VerifyRPCConnectivity {
-    [CmdletBinding()]
-    param ()
-    
-    Write-Verbose "Verifying RPC API connectivity"
-    
-    $uriSegments = [System.Collections.ArrayList]::new(@('Caller', 'SelectById', '1'))
-
-    $uri = BuildNewURI -APIType RPC -Segments $uriSegments -SkipConnectedCheck
-
-    InvokeVivantioRequest -URI $uri -Method POST -ErrorAction Stop
 }
 
 #endregion
@@ -1469,6 +1536,24 @@ function VerifyODataConnectivity {
     $uri = BuildNewURI -APIType OData -Segments $uriSegments -Parameters $uriParameters -SkipConnectedCheck
     
     InvokeVivantioRequest -URI $uri -ErrorAction Stop
+}
+
+#endregion
+
+#region File VerifyRPCConnectivity.ps1
+
+
+function VerifyRPCConnectivity {
+    [CmdletBinding()]
+    param ()
+    
+    Write-Verbose "Verifying RPC API connectivity"
+    
+    $uriSegments = [System.Collections.ArrayList]::new(@('Caller', 'SelectById', '1'))
+
+    $uri = BuildNewURI -APIType RPC -Segments $uriSegments -SkipConnectedCheck
+
+    InvokeVivantioRequest -URI $uri -Method POST -ErrorAction Stop
 }
 
 #endregion

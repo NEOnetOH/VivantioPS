@@ -1,4 +1,4 @@
-﻿function Get-VivantioCredential {
+﻿function Get-VivantioAPICredential {
     [CmdletBinding()]
     [OutputType([pscredential])]
     param ()

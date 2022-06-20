@@ -14,7 +14,7 @@ function InvokeVivantioRequest {
         [switch]$BodyIsJSON,
         
         [ValidateRange(1, 65535)]
-        [uint16]$Timeout = (Get-VivantioTimeout),
+        [uint16]$Timeout = (Get-VivantioAPITimeout),
         
         [ValidateSet('GET', 'PATCH', 'PUT', 'POST', 'DELETE', 'OPTIONS', IgnoreCase = $true)]
         [string]$Method = 'GET',
@@ -22,7 +22,7 @@ function InvokeVivantioRequest {
         [switch]$Raw
     )
     
-    $Headers['Authorization'] = GetHTTPBasicAuthorizationString -Credential (Get-VivantioCredential)
+    $Headers['Authorization'] = GetHTTPBasicAuthorizationString -Credential (Get-VivantioAPICredential)
     
     $splat = @{
         'Method' = $Method

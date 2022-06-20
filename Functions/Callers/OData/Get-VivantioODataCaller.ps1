@@ -30,7 +30,7 @@ function Get-VivantioODataCaller {
 #    $URIComponents = BuildURIComponents -URISegments $Segments -ParametersDictionary $PSBoundParameters
 #    $uri = BuildNewURI -Segments $URIComponents.Segments -Parameters $URIComponents.Parameters
     
-    $RawData = InvokeVivantioRequest -URI $uri -Raw:$Raw
+    $RawData = InvokeVivantioRequest -URI $uri -Raw -ErrorAction Stop
     
     $Callers = [pscustomobject]@{
         'TotalCallers' = $RawData.'@odata.count'
@@ -56,14 +56,24 @@ function Get-VivantioODataCaller {
             $Callers.NumRequests++
         }
         
+        Write-Verbose "Need to make $($Callers.NumRequests - 1) more requests"
+        
         for ($RequestCounter = 1; $RequestCounter -lt $Callers.NumRequests; $RequestCounter++) {
-            Write-Verbose "Request $RequestCounter of $($Callers.NumRequests)"
+            $PercentComplete = (($RequestCounter/$Callers.NumRequests) * 100)
+            $paramWriteProgress = @{
+                Id              = 1
+                Activity        = "Obtaining Callers"
+                Status          = "Request {0} of {1} ({2:N2}% Complete)" -f $RequestCounter, $Callers.NumRequests, $PercentComplete
+                PercentComplete = $PercentComplete
+            }
+            
+            Write-Progress @paramWriteProgress
             
             $Parameters['$skip'] = ($RequestCounter * 100)
             
             $uri = BuildNewURI -APIType OData -Segments $Segments -Parameters $Parameters
             
-            $Callers.value.AddRange((InvokeVivantioRequest -URI $uri -Raw:$Raw).value)
+            $Callers.value.AddRange((InvokeVivantioRequest -URI $uri -Raw).value)
         }
     }
     

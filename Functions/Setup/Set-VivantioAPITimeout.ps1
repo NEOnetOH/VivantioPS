@@ -1,5 +1,5 @@
 ﻿
-function Set-VivantioTimeout {
+function Set-VivantioAPITimeout {
     [CmdletBinding(ConfirmImpact = 'Low',
                    SupportsShouldProcess = $true)]
     [OutputType([uint16])]

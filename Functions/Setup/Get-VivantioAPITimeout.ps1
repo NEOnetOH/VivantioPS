@@ -1,5 +1,5 @@
 ﻿
-function Get-VivantioTimeout {
+function Get-VivantioAPITimeout {
     [CmdletBinding()]
     [OutputType([uint16])]
     param ()

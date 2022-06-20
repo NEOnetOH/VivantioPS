@@ -45,7 +45,7 @@ function Connect-VivantioAPI {
     
     if (-not $Credential) {
         try {
-            $Credential = Get-VivantioCredential -ErrorAction Stop
+            $Credential = Get-VivantioAPICredential -ErrorAction Stop
         } catch {
             # Credentials are not set... Try to obtain from the user
             if (-not ($Credential = Get-Credential -Message "Enter credentials for Vivantio")) {
@@ -56,8 +56,8 @@ function Connect-VivantioAPI {
     
     $null = Set-VivantioODataURI -URI $ODataURI
     $null = Set-VivantioRPCURI -URI $RPCURI
-    $null = Set-VivantioCredential -Credential $Credential
-    $null = Set-VivantioTimeout -TimeoutSeconds $TimeoutSeconds
+    $null = Set-VivantioAPICredential -Credential $Credential
+    $null = Set-VivantioAPITimeout -TimeoutSeconds $TimeoutSeconds
     
     try {
         $null = VerifyRPCConnectivity -ErrorAction Stop

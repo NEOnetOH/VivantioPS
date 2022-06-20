@@ -1,4 +1,4 @@
-﻿function Clear-VivantioCredential {
+﻿function Clear-VivantioAPICredential {
     [CmdletBinding(ConfirmImpact = 'Medium', SupportsShouldProcess = $true)]
     param
     (

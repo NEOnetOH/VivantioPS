@@ -10,6 +10,7 @@
         Write-Verbose "Creating VivantioConfig hashtable"
         $script:VivantioPSConfig = @{
             'Connected' = $false
+            'ConnectedTimestamp' = $null
             'URI'       = [pscustomobject]@{
                 'RPC' = [System.UriBuilder]::new()
                 'OData' = [System.UriBuilder]::new()

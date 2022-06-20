@@ -1,4 +1,4 @@
-﻿function Set-VivantioCredential {
+﻿function Set-VivantioAPICredential {
     [CmdletBinding(DefaultParameterSetName = 'CredsObject',
         ConfirmImpact = 'Low',
         SupportsShouldProcess = $true)]
