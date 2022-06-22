@@ -1,10 +1,9 @@
 
 function Get-VivantioRPCCustomFormFieldDefinition {
-    [CmdletBinding(DefaultParameterSetName = 'ById')]
+    [CmdletBinding()]
     param
     (
-        [Parameter(ParameterSetName = 'ById',
-                   Mandatory = $true)]
+        [Parameter(Mandatory = $true)]
         [uint64]$Id,
         
         [switch]$Raw
@@ -20,8 +19,6 @@ function Get-VivantioRPCCustomFormFieldDefinition {
         $uri = BuildNewURI -Segments $Segments
         
         InvokeVivantioRequest -URI $uri -Method POST -Raw:$Raw
-        
-        break
     }
     
     end {

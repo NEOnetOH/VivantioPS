@@ -1,5 +1,28 @@
 
 function Get-VivantioRPCCustomFormDefinition {
+<#
+    .SYNOPSIS
+        Get the custom form definition
+    
+    .DESCRIPTION
+        Provided the definition ID or RecordTypeId, get the system-wide custom form definition
+    
+    .PARAMETER Id
+        Database ID of the form definition
+    
+    .PARAMETER RecordTypeId
+        A description of the RecordTypeId parameter.
+    
+    .PARAMETER Raw
+        A description of the Raw parameter.
+    
+    .EXAMPLE
+        		PS C:\> Get-VivantioRPCCustomFormDefinition -RecordTypeId $value1
+    
+    .NOTES
+        Additional information about the function.
+#>
+    
     [CmdletBinding(DefaultParameterSetName = 'ById')]
     param
     (
@@ -16,6 +39,11 @@ function Get-VivantioRPCCustomFormDefinition {
     
     begin {
         $Segments = [System.Collections.ArrayList]::new(@('Entity'))
+        $paramInvokeVivantioRequest = @{
+            URI    = $null
+            Method = 'POST'
+            Raw    = $Raw
+        }
     }
     
     process {
@@ -23,23 +51,23 @@ function Get-VivantioRPCCustomFormDefinition {
             'ById' {
                 [void]$Segments.AddRange(@('CustomEntityDefinitionSelectById', $Id))
                 
-                $uri = BuildNewURI -Segments $Segments
-                
-                InvokeVivantioRequest -URI $uri -Method POST -Raw:$Raw
-                
                 break
             }
             
             'ByRecordTypeId' {
                 [void]$Segments.Add('CustomEntityDefinitionSelectByRecordTypeId')
                 
-                $uri = BuildNewURI -Segments $Segments
-                
-                InvokeVivantioRequest -URI $uri -Body @{'Id' = $RecordTypeId} -Method POST
+                $paramInvokeVivantioRequest['Body'] = @{
+                    'Id' = $RecordTypeId
+                }
                 
                 break
             }
         }
+        
+        $paramInvokeVivantioRequest.URI = BuildNewURI -Segments $Segments
+        
+        InvokeVivantioRequest @paramInvokeVivantioRequest
     }
     
     end {

@@ -15,3 +15,17 @@ Module for interacting with Vivantio APIs (both RPC and OData)
     ```Powershell
     Get-VivantioRPCClient -Id 30
     ```
+    
+# Custom Entities/Custom Forms
+It is important to understand the structure of `CustomEntityDefinitions` and how they relate to `FieldDefinitions`, 
+`FieldOptions`, and `Entities`:
+
+ 1. Custom Entity Definitions are created system wide with the following relevent properties:
+    - Id (unique)
+    - Name
+    - Label
+    - FieldOptions
+        - An array of `FieldDefinitions`
+    - RecordTypeId
+        - The associated area of Vivantio by Id (Caller, Client, Ticket, etc..)
+    

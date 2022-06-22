@@ -16,7 +16,7 @@ function New-VivantioODataFilter {
                    Position = 2)]
         [AllowEmptyString()]
         [AllowNull()]
-        [string]$Value,
+        [object]$Value,
         
         [Parameter(Position = 3)]
         [ValidateSet('String', 'Integer', 'Boolean', IgnoreCase = $true)]

@@ -20,6 +20,9 @@
     .PARAMETER Environment
         A description of the Environment parameter.
     
+    .PARAMETER ResetCurrentEnvironment
+        A description of the ResetCurrentEnvironment parameter.
+    
     .EXAMPLE
         Use all defaults and concatenate all files
         
@@ -52,7 +55,9 @@ param
     [version]$NewVersion,
     
     [ValidateSet('dev', 'development', 'prod', 'production', IgnoreCase = $true)]
-    [string]$Environment = 'development'
+    [string]$Environment = 'development',
+    
+    [switch]$ResetCurrentEnvironment
 )
 
 Import-Module "Microsoft.PowerShell.Utility" -ErrorAction Stop
@@ -189,5 +194,27 @@ Write-Host " Copying psm1"
 Copy-Item -Path $ConcatenatedFilePath -Destination $PSM1OutputPath -Force
 
 Write-Host "Deployment complete" -ForegroundColor Green
+
+if ($ResetCurrentEnvironment) {
+    Write-Warning "Running commands to reset current environment"
+    
+    Write-Host " Reimporting module"
+    Import-Module $PSM1OutputPath, $PSD1OutputPath -Force -ErrorAction Stop
+    
+    Write-Host " Connecting to VivantioAPI"
+    Connect-VivantioAPI -Credential $VivantioAPICredential -ODataURI 'https://neonet.vivantio.com/odata/' -RPCURI 'https://webservices-na01.vivantio.com/api/' -ErrorAction Stop
+    
+    Write-Host "Reset complete" -ForegroundColor Green
+}
+
+
+
+
+
+
+
+
+
+
 
 
