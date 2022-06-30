@@ -28,9 +28,9 @@ function Get-VivantioODataCaller {
     $uri = BuildNewURI -APIType OData -Segments $Segments -Parameters $Parameters
     
     $paramWriteProgress = @{
-        Id       = 1
-        Activity = "Obtaining Callers"
-        Status   = "Request 1 of ?"
+        Id              = 1
+        Activity        = "Obtaining Callers"
+        Status          = "Request 1 of ?"
         PercentComplete = 1
     }
     
@@ -79,7 +79,9 @@ function Get-VivantioODataCaller {
             
             $uri = BuildNewURI -APIType OData -Segments $Segments -Parameters $Parameters
             
-            $Callers.value.AddRange((InvokeVivantioRequest -URI $uri -Raw).value)
+            $RawData = InvokeVivantioRequest -URI $uri -Raw
+            $Callers.'@odata.nextLink' = $RawData.'@odata.nextLink'
+            $Callers.value.AddRange($RawData.value)
         }
     }
     

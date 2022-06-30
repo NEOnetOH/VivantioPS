@@ -15,8 +15,7 @@ function Get-VivantioODataClient {
     
     $Segments = [System.Collections.ArrayList]::new(@('Clients'))
     
-    $Parameters = @{
-    }
+    $Parameters = @{}
     
     if ($PSBoundParameters.ContainsKey('Filter')) {
         $Parameters['$filter'] = $Filter.ToLower().TrimStart('$filter=')
@@ -68,9 +67,9 @@ function Get-VivantioODataClient {
         for ($RequestCounter = 1; $RequestCounter -lt $Clients.NumRequests; $RequestCounter++) {
             $PercentComplete = (($RequestCounter/$Clients.NumRequests) * 100)
             $paramWriteProgress = @{
-                Id       = 1
-                Activity = "Obtaining Clients"
-                Status   = "Request {0} of {1} ({2:N2}% Complete)" -f $RequestCounter, $Clients.NumRequests, $PercentComplete
+                Id              = 1
+                Activity        = "Obtaining Clients"
+                Status          = "Request {0} of {1} ({2:N2}% Complete)" -f $RequestCounter, $Clients.NumRequests, $PercentComplete
                 PercentComplete = $PercentComplete
             }
             
@@ -80,7 +79,9 @@ function Get-VivantioODataClient {
             
             $uri = BuildNewURI -APIType OData -Segments $Segments -Parameters $Parameters
             
-            $Clients.value.AddRange((InvokeVivantioRequest -URI $uri -Raw).value)
+            $RawData = InvokeVivantioRequest -URI $uri -Raw
+            $Clients.'@odata.nextLink' = $RawData.'@odata.nextLink'
+            $Clients.value.AddRange($RawData.value)
         }
     }
     
