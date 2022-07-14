@@ -60,9 +60,11 @@ param
     [switch]$ResetCurrentEnvironment
 )
 
-Import-Module "Microsoft.PowerShell.Utility" -ErrorAction Stop
-
 Write-Host "Beginning deployment" -ForegroundColor Green
+
+Write-Host "Importing required modules" -ForegroundColor Green
+
+Import-Module "Microsoft.PowerShell.Utility" -ErrorAction Stop
 
 $ModuleName = 'VivantioPS'
 $ConcatenatedFilePath = "$PSScriptRoot\concatenated.ps1"
@@ -141,19 +143,29 @@ if (Test-Path $StandalonePath) {
 #Get-Content $ConcatenatedClassesFile | Out-File -FilePath $ConcatenatedFilePath -Encoding utf8 -Append
 
 
-Write-Host " Adding psm1"
+Write-Host "Adding psm1"
 Get-Content "$PSScriptRoot\$ModuleName.psm1" | Out-File -FilePath $ConcatenatedFilePath -Encoding UTF8 -Append
 
-if ($Environment -ilike 'dev*') {
-    "## Exporting all functions for development ##" | Out-File -FilePath $ConcatenatedFilePath -Encoding utf8 -Append
-    "Export-ModuleMember -Function '*'" | Out-File -FilePath $ConcatenatedFilePath -Encoding utf8 -Append
-}
+
 
 $PSDManifest = Import-PowerShellDataFile -Path "$PSScriptRoot\$ModuleName.psd1"
 # Get the version from the PSD1
-#[version]$CurrentVersion = [regex]::matches($PSDContent, "\s*ModuleVersion\s=\s'(\d*.\d*.\d*)'\s*").groups[1].value
 [version]$CurrentVersion = $PSDManifest.ModuleVersion
 
+$UpdateModuleManifestSplat = @{
+    Path              = "$PSScriptRoot\$ModuleName.psd1"
+    ErrorAction       = 'Stop'
+}
+
+if ($Environment -ilike 'dev*') {
+    Write-Host "Exporting all functions for development"
+    $UpdateModuleManifestSplat['FunctionsToExport'] = $PS1FunctionFiles.BaseName
+} else {
+    $UpdateModuleManifestSplat['FunctionsToExport'] = ($PS1FunctionFiles.BaseName | Where-Object { $_ -like '*-*' })
+}
+
+
+Write-Host "Comparing versions"
 
 switch ($PSCmdlet.ParameterSetName) {
     "SkipVersion" {
@@ -167,30 +179,31 @@ switch ($PSCmdlet.ParameterSetName) {
         # Calculate the new version
         [version]$NewVersion = "{0}.{1}.{2}" -f ($CurrentVersion.Major + $VersionIncrease.Major), ($CurrentVersion.Minor + $VersionIncrease.Minor), ($CurrentVersion.Build + $VersionIncrease.Build)
         
-        Write-Host " Updating version in PSD1 from [$CurrentVersion] to [$NewVersion]"
+        Write-Host " Updating version from [$CurrentVersion] to [$NewVersion]"
         
         # Replace the version number in the content
-        #$PSDContent -replace $CurrentVersion, $NewVersion | Out-File $PSScriptRoot\$ModuleName.psd1 -Encoding UTF8
-        Update-ModuleManifest -Path "$PSScriptRoot\$ModuleName.psd1" -ModuleVersion $NewVersion
+        $UpdateModuleManifestSplat['ModuleVersion'] = $NewVersion
         
         break
     }
     
     "SetVersion" {
-        Write-Host " Updating version in PSD1 from [$CurrentVersion] to [$NewVersion]"
+        Write-Host " Updating version from [$CurrentVersion] to [$NewVersion]"
         
         # Replace the version number in the content
-        #$PSDContent -replace $CurrentVersion, $NewVersion | Out-File $PSScriptRoot\$ModuleName.psd1 -Encoding UTF8
-        Update-ModuleManifest -Path "$PSScriptRoot\$ModuleName.psd1" -ModuleVersion $NewVersion
+        $UpdateModuleManifestSplat['ModuleVersion'] = $NewVersion
         
         break
     }
 }
 
-Write-Host " Copying psd1"
+Write-Host "Updating Module Manifest"
+Update-ModuleManifest @UpdateModuleManifestSplat
+
+Write-Host "Copying psd1"
 Copy-Item -Path "$PSScriptRoot\$ModuleName.psd1" -Destination $PSD1OutputPath -Force
 
-Write-Host " Copying psm1"
+Write-Host "Copying psm1"
 Copy-Item -Path $ConcatenatedFilePath -Destination $PSM1OutputPath -Force
 
 Write-Host "Deployment complete" -ForegroundColor Green
