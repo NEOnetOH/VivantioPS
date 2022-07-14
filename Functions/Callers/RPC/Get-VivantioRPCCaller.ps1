@@ -5,6 +5,7 @@ function Get-VivantioRPCCaller {
     (
         [Parameter(ParameterSetName = 'Select',
                    Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
         [object]$Query,
         
         [Parameter(ParameterSetName = 'SelectById',
@@ -53,7 +54,7 @@ function Get-VivantioRPCCaller {
             
             'SelectById' {
                 $paramInvokeVivantioRequest = @{
-                    Raw = $Raw
+                    Raw    = $Raw
                     Method = 'POST'
                 }
                 
