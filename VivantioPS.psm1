@@ -19,6 +19,6 @@ $script:CommonParameterNames = New-Object System.Collections.ArrayList
 
 SetupVivantioConfigVariable
 
-Export-ModuleMember -Function '*-*'
+#Export-ModuleMember -Function '*-*'
 
 

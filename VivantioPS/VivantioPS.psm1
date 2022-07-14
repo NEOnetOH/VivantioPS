@@ -305,17 +305,20 @@ function Connect-VivantioAPI {
     .DESCRIPTION
         Connects to the Vivantio API and ensures Credential work properly
     
-    .PARAMETER Credential
-        Credential object containing the API username and password
-    
     .PARAMETER ODataURI
         URI for OData API
     
-    .PARAMETER APIURI
-        URI for basic API
+    .PARAMETER RPCURI
+        A description of the RPCURI parameter.
+    
+    .PARAMETER Credential
+        Credential object containing the API username and password
     
     .PARAMETER TimeoutSeconds
         The number of seconds before the HTTP call times out. Defaults to 30 seconds
+    
+    .PARAMETER APIURI
+        URI for basic API
     
     .EXAMPLE
         PS C:\> Connect-VivantioAPI -Hostname "Vivantio.domain.com"
@@ -329,14 +332,18 @@ function Connect-VivantioAPI {
     [CmdletBinding()]
     param
     (
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$ODataURI,
+        
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$RPCURI,
+        
         [Parameter(Mandatory = $false)]
         [pscredential]$Credential,
         
-        [string]$ODataURI,
-        
-        [string]$RPCURI,
-        
-        [ValidateRange(1, 65535)]
+        [ValidateRange(1, 900)]
         [ValidateNotNullOrEmpty()]
         [uint16]$TimeoutSeconds = 30
     )
@@ -688,6 +695,7 @@ function Get-VivantioRPCCaller {
     (
         [Parameter(ParameterSetName = 'Select',
                    Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
         [object]$Query,
         
         [Parameter(ParameterSetName = 'SelectById',
@@ -736,7 +744,7 @@ function Get-VivantioRPCCaller {
             
             'SelectById' {
                 $paramInvokeVivantioRequest = @{
-                    Raw = $Raw
+                    Raw    = $Raw
                     Method = 'POST'
                 }
                 
@@ -1797,8 +1805,6 @@ $script:CommonParameterNames = New-Object System.Collections.ArrayList
 
 SetupVivantioConfigVariable
 
-Export-ModuleMember -Function '*-*'
+#Export-ModuleMember -Function '*-*'
 
 
-## Exporting all functions for development ##
-Export-ModuleMember -Function '*'
