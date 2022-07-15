@@ -43,6 +43,8 @@
         ===========================================================================
 #>
 [CmdletBinding(DefaultParameterSetName = 'IncreaseVersion')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSReviewUnusedParameter", "")]
 param
 (
     [Parameter(ParameterSetName = 'SkipVersion')]
@@ -69,9 +71,7 @@ Import-Module "Microsoft.PowerShell.Utility" -ErrorAction Stop
 $ModuleName = 'VivantioPS'
 $ConcatenatedFilePath = "$PSScriptRoot\concatenated.ps1"
 $FunctionPath = "$PSScriptRoot\Functions"
-$StandalonePath = "$PSScriptRoot\Standalone"
 $OutputDirectory = "$PSScriptRoot\$ModuleName"
-$StandaloneOutputDirectory = "$OutputDirectory\Files"
 $PSD1OutputPath = "$OutputDirectory\$ModuleName.psd1"
 $PSM1OutputPath = "$OutputDirectory\$ModuleName.psm1"
 
@@ -109,44 +109,8 @@ if (-not (Test-Path $OutputDirectory)) {
     }
 }
 
-if (Test-Path $StandalonePath) {
-    if (-not (Test-Path $StandaloneOutputDirectory)) {
-        try {
-            Write-Warning "Creating path [$StandaloneOutputDirectory]"
-            $null = New-Item -Path $StandaloneOutputDirectory -ItemType Directory -Force
-        } catch {
-            throw "Failed to create directory [$StandaloneOutputDirectory]: $($_.Exception.Message)"
-        }
-    }
-    
-    $PS1StandaloneFiles = @(Get-ChildItem $StandalonePath -Filter "*.ps1" -Recurse | Sort-Object Name)
-    
-    $Counter = 0
-    foreach ($StandaloneFile in $PS1StandaloneFiles) {
-        $Counter++
-        
-        Write-Host (" Copying standalone file {0:D2}/{1:D2}: $($StandaloneFile.Name)" -f $Counter, $PS1StandaloneFiles.Count)
-        try {
-            Copy-Item -Path $StandaloneFile.FullName -Destination $StandaloneOutputDirectory -Force -ErrorAction Stop
-        } catch {
-            Write-Host "FAILED TO COPY STANDALONE FILE: $($_.Exception.Message): $($_.TargetObject)" -ForegroundColor Red
-            return
-        }
-    }
-} else {
-    Write-Warning "Standalone path at [$StandalonePath] not found"
-}
-
-#Write-Host " Adding classes/enums"
-#. "$PSScriptRoot\BuildCustomClasses.ps1"
-#
-#Get-Content $ConcatenatedClassesFile | Out-File -FilePath $ConcatenatedFilePath -Encoding utf8 -Append
-
-
 Write-Host "Adding psm1"
 Get-Content "$PSScriptRoot\$ModuleName.psm1" | Out-File -FilePath $ConcatenatedFilePath -Encoding UTF8 -Append
-
-
 
 $PSDManifest = Import-PowerShellDataFile -Path "$PSScriptRoot\$ModuleName.psd1"
 # Get the version from the PSD1
@@ -164,9 +128,7 @@ if ($Environment -ilike 'dev*') {
     $UpdateModuleManifestSplat['FunctionsToExport'] = ($PS1FunctionFiles.BaseName | Where-Object { $_ -like '*-*' })
 }
 
-
 Write-Host "Comparing versions"
-
 switch ($PSCmdlet.ParameterSetName) {
     "SkipVersion" {
         # Dont do anything with the PSD
