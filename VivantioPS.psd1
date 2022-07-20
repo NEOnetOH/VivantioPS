@@ -33,7 +33,7 @@ Copyright = '(c) 2022. All rights reserved.'
 Description = 'Provides functions to interface with VivantioAPI'
 
 # Minimum version of the PowerShell engine required by this module
-PowerShellVersion = '3.0'
+PowerShellVersion = '5.1'
 
 # Name of the PowerShell host required by this module
 # PowerShellHostName = ''
@@ -90,13 +90,13 @@ FunctionsToExport = 'Add-VivantioRPCCustomFormInstance', 'Clear-VivantioAPICrede
                'Set-VivantioRPCURIPort', 'Set-VivantioRPCURIScheme'
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
-CmdletsToExport = '*'
+CmdletsToExport = ''
 
 # Variables to export from this module
-VariablesToExport = '*'
+VariablesToExport = ''
 
 # Aliases to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no aliases to export.
-AliasesToExport = '*'
+AliasesToExport = ''
 
 # DSC resources to export from this module
 # DscResourcesToExport = @()
@@ -113,13 +113,13 @@ PrivateData = @{
     PSData = @{
 
         # Tags applied to this module. These help with module discovery in online galleries.
-        # Tags = @()
+        Tags = @('Vivantio', 'API')
 
         # A URL to the license for this module.
         # LicenseUri = ''
 
         # A URL to the main website for this project.
-        # ProjectUri = ''
+        ProjectUri = 'https://github.com/NEOnetOH/VivantioPS'
 
         # A URL to an icon representing this module.
         # IconUri = ''
