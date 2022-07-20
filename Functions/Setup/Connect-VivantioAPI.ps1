@@ -11,16 +11,13 @@ function Connect-VivantioAPI {
         URI for OData API
     
     .PARAMETER RPCURI
-        A description of the RPCURI parameter.
+        URI for RPC API
     
     .PARAMETER Credential
         Credential object containing the API username and password
     
     .PARAMETER TimeoutSeconds
-        The number of seconds before the HTTP call times out. Defaults to 30 seconds
-    
-    .PARAMETER APIURI
-        URI for basic API
+        The number of seconds before the HTTP call times out. Defaults to 30 seconds. Limited to 900 seconds
     
     .EXAMPLE
         PS C:\> Connect-VivantioAPI -Hostname "Vivantio.domain.com"
@@ -45,8 +42,8 @@ function Connect-VivantioAPI {
         [Parameter(Mandatory = $false)]
         [pscredential]$Credential,
         
-        [ValidateRange(1, 900)]
         [ValidateNotNullOrEmpty()]
+        [ValidateRange(1, 900)]
         [uint16]$TimeoutSeconds = 30
     )
     
@@ -80,6 +77,7 @@ function Connect-VivantioAPI {
     }
     
     $script:VivantioPSConfig.Connected = $true
+    $script:VivantioPSConfig.ConnectedTimestamp = (Get-Date)
     Write-Verbose "Successfully connected!"
     
     Write-Verbose "Connection process completed"
