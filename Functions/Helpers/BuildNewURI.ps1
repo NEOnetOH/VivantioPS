@@ -8,7 +8,7 @@ function BuildNewURI {
         Internal function used to build a URIBuilder object.
     
     .PARAMETER APIType
-        A description of the APIType parameter.
+        OData or RPC.
     
     .PARAMETER Segments
         Array of strings for each segment in the URL path
@@ -17,20 +17,8 @@ function BuildNewURI {
         Hashtable of query parameters to include
     
     .PARAMETER SkipConnectedCheck
-        A description of the SkipConnectedCheck parameter.
-    
-    .PARAMETER Hostname
-        Hostname of the Vivantio API
-    
-    .PARAMETER HTTPS
-        Whether to use HTTPS or HTTP
-    
-    .PARAMETER Port
-        A description of the Port parameter.
-    
-    .PARAMETER APIInfo
-        A description of the APIInfo parameter.
-    
+        Don't check if we are already connected to the API.
+
     .EXAMPLE
         PS C:\> BuildNewURI
     

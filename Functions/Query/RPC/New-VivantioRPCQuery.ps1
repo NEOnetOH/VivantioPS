@@ -2,22 +2,27 @@
 function New-VivantioRPCQuery {
 <#
     .SYNOPSIS
-        A brief description of the New-VivantioAPIQuery function.
+        Generates a hashtable of query items to feed to an RPC API query.
     
     .DESCRIPTION
-        A detailed description of the New-VivantioAPIQuery function.
+        Generates a hashtable of query items to feed to an RPC API query.
     
     .PARAMETER Mode
-        [VivantioQueryMode]$Mode,
+        What type of matching the query will do [MatchAll | MatchAny | MatchNone]
     
     .PARAMETER Items
-        A description of the Items parameter.
+        A collection of QueryItems from New-VivantioRPCQueryItem
     
     .PARAMETER JSON
-        A description of the JSON parameter.
+        Providing JSON filter will use the JSON as-is as the query
     
     .EXAMPLE
-        		PS C:\> New-VivantioAPIQuery -Mode 'MatchAll' -Items $value2
+        PS C:\> New-VivantioAPIQuery 
+                -Mode 'MatchAll' 
+                -Items (New-VivantioRPCQuery -Mode MatchAll -Items (New-VivantioRPCQueryItem -FieldName 'email' -Operator Equals -Value 'user@domain.com'))
+    
+    .EXAMPLE
+        PS C:\> New-VivantioAPIQuery 'MatchAll' $Items
     
     .OUTPUTS
         pscustomobject, string

@@ -35,6 +35,7 @@ function Get-VivantioODataCaller {
     }
     
     Write-Progress @paramWriteProgress
+    Write-Verbose "Obtaining initial page of data"
     $RawData = InvokeVivantioRequest -URI $uri -Raw -ErrorAction Stop
     
     # Create a callers object to mimic the OData return object with some additional properties
@@ -65,6 +66,8 @@ function Get-VivantioODataCaller {
         Write-Verbose "Need to make $($Callers.NumRequests - 1) more requests"
         
         for ($RequestCounter = 1; $RequestCounter -lt $Callers.NumRequests; $RequestCounter++) {
+            Write-Verbose "Request $($RequestCounter + 1) of $($Callers.NumRequests)"
+            
             $PercentComplete = (($RequestCounter/$Callers.NumRequests) * 100)
             $paramWriteProgress = @{
                 Id              = 1

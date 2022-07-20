@@ -6,7 +6,7 @@ function Set-VivantioAPITimeout {
     param
     (
         [Parameter(Mandatory = $false)]
-        [ValidateRange(1, 65535)]
+        [ValidateRange(1, 900)]
         [uint16]$TimeoutSeconds = 30
     )
 

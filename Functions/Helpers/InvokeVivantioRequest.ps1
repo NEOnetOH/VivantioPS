@@ -1,19 +1,53 @@
 ﻿
 function InvokeVivantioRequest {
+<#
+    .SYNOPSIS
+        Internal wrapper function for Invoke-RestMethod
+    
+    .DESCRIPTION
+        A detailed description of the InvokeVivantioRequest function.
+    
+    .PARAMETER URI
+        The URIBuilder used to target Invoke-RestMethod
+    
+    .PARAMETER Headers
+        A hashtable of headers to include in the request. Authorization is automatically included
+    
+    .PARAMETER Body
+        Request body data to include in the request (will be converted to JSON unless -BodyIsJSON is enabled)
+    
+    .PARAMETER BodyIsJSON
+        Assert the provided object is already JSON string
+    
+    .PARAMETER Timeout
+        How long to wait before timing out Invoke-RestMethod
+    
+    .PARAMETER Method
+        HTTP Method [GET | PATCH | PUT | POST | DELETE | OPTIONS]
+    
+    .PARAMETER Raw
+        Return the raw request data instead of custom object
+    
+    .EXAMPLE
+        PS C:\> InvokeVivantioRequest -URI $MyURIBuilder
+    
+    .NOTES
+        Additional information about the function.
+#>
+    
     [CmdletBinding()]
     param
     (
         [Parameter(Mandatory = $true)]
         [System.UriBuilder]$URI,
         
-        [Hashtable]$Headers = @{
-        },
+        [Hashtable]$Headers = [hashtable]::new(),
         
         [object]$Body,
         
         [switch]$BodyIsJSON,
         
-        [ValidateRange(1, 65535)]
+        [ValidateRange(1, 900)]
         [uint16]$Timeout = (Get-VivantioAPITimeout),
         
         [ValidateSet('GET', 'PATCH', 'PUT', 'POST', 'DELETE', 'OPTIONS', IgnoreCase = $true)]
