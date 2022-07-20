@@ -23,13 +23,15 @@ function GetHTTPBasicAuthorizationString {
     
     switch ($PSCmdlet.ParameterSetName) {
         'Hashtable' {
-            Write-Output( [hashtable]@{
+            [hashtable]@{
                 'Authorization' = "Basic $base64"
-            })
+            }
+            
+            break
         }
         
         default {
-            Write-Output "Basic $base64"
+            "Basic $base64"
         }
     }
 }
