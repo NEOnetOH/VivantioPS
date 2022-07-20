@@ -5,11 +5,11 @@
     param
     (
         [Parameter(Mandatory = $true)]
-        [string]$Hostname
+        [string]$Host
     )
     
     if ($PSCmdlet.ShouldProcess('Vivantio OData URI Host', 'Set')) {
-        $script:VivantioPSConfig.URI.OData.Host = $Hostname.Trim()
+        $script:VivantioPSConfig.URI.OData.Host = $Host.Trim()
         $script:VivantioPSConfig.URI.OData.Host
     }
 }

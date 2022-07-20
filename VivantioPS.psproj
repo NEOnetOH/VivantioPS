@@ -49,7 +49,7 @@
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioODataURIHost_ps1" ExportFunctions="True">Functions\Setup\Get-VivantioODataURIHost.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioODataURIPort_ps1" ExportFunctions="True">Functions\Setup\Get-VivantioODataURIPort.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioODataURIScheme_ps1" ExportFunctions="True">Functions\Setup\Get-VivantioODataURIScheme.ps1</File>
-    <File Build="0" Shared="True" ReferenceFunction="Invoke-Set-VivantioODataHostName_ps1" ExportFunctions="True">Functions\Setup\Set-VivantioODataHostName.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-Set-VivantioODataHost_ps1" ExportFunctions="True">Functions\Setup\Set-VivantioODataHost.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Set-VivantioODataURIPort_ps1" ExportFunctions="True">Functions\Setup\Set-VivantioODataURIPort.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Set-VivantioODataURIScheme_ps1" ExportFunctions="True">Functions\Setup\Set-VivantioODataURIScheme.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioODataURI_ps1" ExportFunctions="True">Functions\Setup\Get-VivantioODataURI.ps1</File>
