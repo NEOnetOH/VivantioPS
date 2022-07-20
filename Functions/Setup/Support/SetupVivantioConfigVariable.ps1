@@ -12,9 +12,12 @@
             'Connected' = $false
             'ConnectedTimestamp' = $null
             'URI'       = [pscustomobject]@{
-                'RPC' = [System.UriBuilder]::new()
-                'OData' = [System.UriBuilder]::new()
+                'RPC' = $null
+                'OData' = $null
             }
+            'Credential'         = $Null
+            'Timeout'            = $null
+            'Proxy' = $null
         }
     } else {
         Write-Warning "Cannot overwrite VivantioConfig without -Overwrite parameter!"
