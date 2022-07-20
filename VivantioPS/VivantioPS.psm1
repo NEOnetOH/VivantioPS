@@ -64,7 +64,7 @@ function BuildNewURI {
         Internal function used to build a URIBuilder object.
     
     .PARAMETER APIType
-        A description of the APIType parameter.
+        OData or RPC.
     
     .PARAMETER Segments
         Array of strings for each segment in the URL path
@@ -73,20 +73,8 @@ function BuildNewURI {
         Hashtable of query parameters to include
     
     .PARAMETER SkipConnectedCheck
-        A description of the SkipConnectedCheck parameter.
-    
-    .PARAMETER Hostname
-        Hostname of the Vivantio API
-    
-    .PARAMETER HTTPS
-        Whether to use HTTPS or HTTP
-    
-    .PARAMETER Port
-        A description of the Port parameter.
-    
-    .PARAMETER APIInfo
-        A description of the APIInfo parameter.
-    
+        Don't check if we are already connected to the API.
+
     .EXAMPLE
         PS C:\> BuildNewURI
     
@@ -235,19 +223,6 @@ function BuildURIComponents {
 
 #region File CheckVivantioIsConnected.ps1
 
-<#
-	.NOTES
-	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2020 v5.7.172
-	 Created on:   	3/26/2020 14:22
-	 Created by:   	Claussen
-	 Organization: 	NEOnet
-	 Filename:     	CheckVivantioIsConnected.ps1
-	===========================================================================
-	.DESCRIPTION
-		A description of the file.
-#>
-
 
 function CheckVivantioIsConnected {
     [CmdletBinding()]
@@ -309,16 +284,13 @@ function Connect-VivantioAPI {
         URI for OData API
     
     .PARAMETER RPCURI
-        A description of the RPCURI parameter.
+        URI for RPC API
     
     .PARAMETER Credential
         Credential object containing the API username and password
     
     .PARAMETER TimeoutSeconds
-        The number of seconds before the HTTP call times out. Defaults to 30 seconds
-    
-    .PARAMETER APIURI
-        URI for basic API
+        The number of seconds before the HTTP call times out. Defaults to 30 seconds. Limited to 900 seconds
     
     .EXAMPLE
         PS C:\> Connect-VivantioAPI -Hostname "Vivantio.domain.com"
@@ -343,8 +315,8 @@ function Connect-VivantioAPI {
         [Parameter(Mandatory = $false)]
         [pscredential]$Credential,
         
-        [ValidateRange(1, 900)]
         [ValidateNotNullOrEmpty()]
+        [ValidateRange(1, 900)]
         [uint16]$TimeoutSeconds = 30
     )
     
@@ -378,6 +350,7 @@ function Connect-VivantioAPI {
     }
     
     $script:VivantioPSConfig.Connected = $true
+    $script:VivantioPSConfig.ConnectedTimestamp = (Get-Date)
     Write-Verbose "Successfully connected!"
     
     Write-Verbose "Connection process completed"
@@ -424,6 +397,34 @@ function Get-VivantioAPITimeout {
 
 
 function Get-VivantioODataCaller {
+<#
+    .SYNOPSIS
+        Get caller data from OData
+    
+    .DESCRIPTION
+        A detailed description of the Get-VivantioODataCaller function.
+    
+    .PARAMETER Filter
+        The filter to use for OData. 
+        
+        NOTE: Filtering is extremely limited for OData as the OData interface is not fully developed at Vivantio
+    
+    .PARAMETER Skip
+        Number of items to skip
+    
+    .PARAMETER All
+        Enable to obtain all items in the query instead of only the first page
+    
+    .PARAMETER Raw
+        Return the raw request data instead of results only
+    
+    .EXAMPLE
+        PS C:\> Get-VivantioODataCaller
+    
+    .NOTES
+        Additional information about the function.
+#>
+    
     [CmdletBinding()]
     [OutputType([pscustomobject])]
     param
@@ -459,6 +460,7 @@ function Get-VivantioODataCaller {
     }
     
     Write-Progress @paramWriteProgress
+    Write-Verbose "Obtaining initial page of data"
     $RawData = InvokeVivantioRequest -URI $uri -Raw -ErrorAction Stop
     
     # Create a callers object to mimic the OData return object with some additional properties
@@ -489,11 +491,13 @@ function Get-VivantioODataCaller {
         Write-Verbose "Need to make $($Callers.NumRequests - 1) more requests"
         
         for ($RequestCounter = 1; $RequestCounter -lt $Callers.NumRequests; $RequestCounter++) {
+            Write-Verbose "Request $($RequestCounter + 1) of $($Callers.NumRequests)"
+            
             $PercentComplete = (($RequestCounter/$Callers.NumRequests) * 100)
             $paramWriteProgress = @{
-                Id              = 1
-                Activity        = "Obtaining Callers"
-                Status          = "Request {0} of {1} ({2:N2}% Complete)" -f $RequestCounter, $Callers.NumRequests, $PercentComplete
+                Id       = 1
+                Activity = "Obtaining Callers"
+                Status   = "Request {0} of {1} ({2:N2}% Complete)" -f $RequestCounter, $Callers.NumRequests, $PercentComplete
                 PercentComplete = $PercentComplete
             }
             
@@ -1137,13 +1141,15 @@ function GetHTTPBasicAuthorizationString {
     
     switch ($PSCmdlet.ParameterSetName) {
         'Hashtable' {
-            Write-Output( [hashtable]@{
+            [hashtable]@{
                 'Authorization' = "Basic $base64"
-            })
+            }
+            
+            break
         }
         
         default {
-            Write-Output "Basic $base64"
+            "Basic $base64"
         }
     }
 }
@@ -1162,20 +1168,54 @@ function GetVivantioConfigVariable {
 
 
 function InvokeVivantioRequest {
+<#
+    .SYNOPSIS
+        Internal wrapper function for Invoke-RestMethod
+    
+    .DESCRIPTION
+        A detailed description of the InvokeVivantioRequest function.
+    
+    .PARAMETER URI
+        The URIBuilder used to target Invoke-RestMethod
+    
+    .PARAMETER Headers
+        A hashtable of headers to include in the request. Authorization is automatically included
+    
+    .PARAMETER Body
+        Request body data to include in the request (will be converted to JSON unless -BodyIsJSON is enabled)
+    
+    .PARAMETER BodyIsJSON
+        Assert the provided object is already JSON string
+    
+    .PARAMETER Timeout
+        How long to wait before timing out Invoke-RestMethod
+    
+    .PARAMETER Method
+        HTTP Method [GET | PATCH | PUT | POST | DELETE | OPTIONS]
+    
+    .PARAMETER Raw
+        Return the raw request data instead of custom object
+    
+    .EXAMPLE
+        PS C:\> InvokeVivantioRequest -URI $MyURIBuilder
+    
+    .NOTES
+        Additional information about the function.
+#>
+    
     [CmdletBinding()]
     param
     (
         [Parameter(Mandatory = $true)]
         [System.UriBuilder]$URI,
         
-        [Hashtable]$Headers = @{
-        },
+        [Hashtable]$Headers = [hashtable]::new(),
         
         [object]$Body,
         
         [switch]$BodyIsJSON,
         
-        [ValidateRange(1, 65535)]
+        [ValidateRange(1, 900)]
         [uint16]$Timeout = (Get-VivantioAPITimeout),
         
         [ValidateSet('GET', 'PATCH', 'PUT', 'POST', 'DELETE', 'OPTIONS', IgnoreCase = $true)]
@@ -1354,22 +1394,27 @@ function New-VivantioRPCCustomFormFieldValue {
 function New-VivantioRPCQuery {
 <#
     .SYNOPSIS
-        A brief description of the New-VivantioAPIQuery function.
+        Generates a hashtable of query items to feed to an RPC API query.
     
     .DESCRIPTION
-        A detailed description of the New-VivantioAPIQuery function.
+        Generates a hashtable of query items to feed to an RPC API query.
     
     .PARAMETER Mode
-        [VivantioQueryMode]$Mode,
+        What type of matching the query will do [MatchAll | MatchAny | MatchNone]
     
     .PARAMETER Items
-        A description of the Items parameter.
+        A collection of QueryItems from New-VivantioRPCQueryItem
     
     .PARAMETER JSON
-        A description of the JSON parameter.
+        Providing JSON filter will use the JSON as-is as the query
     
     .EXAMPLE
-        		PS C:\> New-VivantioAPIQuery -Mode 'MatchAll' -Items $value2
+        PS C:\> New-VivantioAPIQuery 
+                -Mode 'MatchAll' 
+                -Items (New-VivantioRPCQuery -Mode MatchAll -Items (New-VivantioRPCQueryItem -FieldName 'email' -Operator Equals -Value 'user@domain.com'))
+    
+    .EXAMPLE
+        PS C:\> New-VivantioAPIQuery 'MatchAll' $Items
     
     .OUTPUTS
         pscustomobject, string
@@ -1416,7 +1461,35 @@ function New-VivantioRPCQuery {
 
 
 function New-VivantioRPCQueryItem {
+<#
+    .SYNOPSIS
+        Generate a hashtable query item for an RPC API query
+    
+    .DESCRIPTION
+        Generate a hashtable query item for an RPC API query
+    
+    .PARAMETER FieldName
+        The name of the field for filtering
+    
+    .PARAMETER Operator
+        How the match will operate
+        [Equals | DoesNotEqual | GreaterThan | GreaterThanOrEqualTo | LessThan | LessThanOrEqualTo | Like]
+    
+    .PARAMETER Value
+        The value to match
+    
+    .EXAMPLE
+        PS C:\> New-VivantioRPCQueryItem -FieldName 'Email' -Operator Equals -Value 'user@domain.com'
+    
+    .EXAMPLE
+        PS C:\> New-VivantioRPCQueryItem 'Email' Equals 'user@domain.com'
+    
+    .NOTES
+        Additional information about the function.
+#>
+    
     [CmdletBinding()]
+    [OutputType([hashtable])]
     param
     (
         [Parameter(Mandatory = $true,
@@ -1446,33 +1519,39 @@ function New-VivantioRPCQueryItem {
 
 function Set-VivantioAPICredential {
     [CmdletBinding(DefaultParameterSetName = 'CredsObject',
-        ConfirmImpact = 'Low',
-        SupportsShouldProcess = $true)]
+                   ConfirmImpact = 'Low',
+                   SupportsShouldProcess = $true)]
     [OutputType([pscredential])]
     param
     (
         [Parameter(ParameterSetName = 'CredsObject',
-            Mandatory = $true)]
+                   Mandatory = $true)]
         [pscredential]$Credential,
-
+        
         [Parameter(ParameterSetName = 'UserPass',
-            Mandatory = $true)]
-        [securestring]$Token
+                   Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$Username,
+        
+        [Parameter(ParameterSetName = 'UserPass',
+                   Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [securestring]$Password
     )
-
+    
     if ($PSCmdlet.ShouldProcess('Vivantio Credentials', 'Set')) {
         switch ($PsCmdlet.ParameterSetName) {
             'CredsObject' {
                 $script:VivantioPSConfig['Credential'] = $Credential
                 break
             }
-
+            
             'UserPass' {
-                $script:VivantioPSConfig['Credential'] = [System.Management.Automation.PSCredential]::new('notapplicable', $Token)
+                $script:VivantioPSConfig['Credential'] = [System.Management.Automation.PSCredential]::new($Username, $Password)
                 break
             }
         }
-
+        
         $script:VivantioPSConfig['Credential']
     }
 }
@@ -1511,7 +1590,7 @@ function Set-VivantioAPITimeout {
     param
     (
         [Parameter(Mandatory = $false)]
-        [ValidateRange(1, 65535)]
+        [ValidateRange(1, 900)]
         [uint16]$TimeoutSeconds = 30
     )
 
@@ -1523,7 +1602,7 @@ function Set-VivantioAPITimeout {
 
 #endregion
 
-#region File Set-VivantioODataHostName.ps1
+#region File Set-VivantioODataHost.ps1
 
 function Set-VivantioODataURIHost {
     [CmdletBinding(ConfirmImpact = 'Low',
@@ -1532,11 +1611,11 @@ function Set-VivantioODataURIHost {
     param
     (
         [Parameter(Mandatory = $true)]
-        [string]$Hostname
+        [string]$Host
     )
     
     if ($PSCmdlet.ShouldProcess('Vivantio OData URI Host', 'Set')) {
-        $script:VivantioPSConfig.URI.OData.Host = $Hostname.Trim()
+        $script:VivantioPSConfig.URI.OData.Host = $Host.Trim()
         $script:VivantioPSConfig.URI.OData.Host
     }
 }
@@ -1733,9 +1812,12 @@ function SetupVivantioConfigVariable {
             'Connected' = $false
             'ConnectedTimestamp' = $null
             'URI'       = [pscustomobject]@{
-                'RPC' = [System.UriBuilder]::new()
-                'OData' = [System.UriBuilder]::new()
+                'RPC' = $null
+                'OData' = $null
             }
+            'Credential'         = $Null
+            'Timeout'            = $null
+            'Proxy' = $null
         }
     } else {
         Write-Warning "Cannot overwrite VivantioConfig without -Overwrite parameter!"
