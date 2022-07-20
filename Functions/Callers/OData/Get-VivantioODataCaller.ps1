@@ -1,5 +1,33 @@
 
 function Get-VivantioODataCaller {
+<#
+    .SYNOPSIS
+        Get caller data from OData
+    
+    .DESCRIPTION
+        A detailed description of the Get-VivantioODataCaller function.
+    
+    .PARAMETER Filter
+        The filter to use for OData. 
+        
+        NOTE: Filtering is extremely limited for OData as the OData interface is not fully developed at Vivantio
+    
+    .PARAMETER Skip
+        Number of items to skip
+    
+    .PARAMETER All
+        Enable to obtain all items in the query instead of only the first page
+    
+    .PARAMETER Raw
+        Return the raw request data instead of results only
+    
+    .EXAMPLE
+        PS C:\> Get-VivantioODataCaller
+    
+    .NOTES
+        Additional information about the function.
+#>
+    
     [CmdletBinding()]
     [OutputType([pscustomobject])]
     param
@@ -70,9 +98,9 @@ function Get-VivantioODataCaller {
             
             $PercentComplete = (($RequestCounter/$Callers.NumRequests) * 100)
             $paramWriteProgress = @{
-                Id              = 1
-                Activity        = "Obtaining Callers"
-                Status          = "Request {0} of {1} ({2:N2}% Complete)" -f $RequestCounter, $Callers.NumRequests, $PercentComplete
+                Id       = 1
+                Activity = "Obtaining Callers"
+                Status   = "Request {0} of {1} ({2:N2}% Complete)" -f $RequestCounter, $Callers.NumRequests, $PercentComplete
                 PercentComplete = $PercentComplete
             }
             
