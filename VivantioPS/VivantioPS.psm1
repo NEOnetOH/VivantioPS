@@ -1,4 +1,4 @@
-
+﻿
 
 #region File Add-VivantioRPCCustomFormInstance.ps1
 
@@ -359,6 +359,48 @@ function Connect-VivantioAPI {
 
 #endregion
 
+#region File GetHTTPBasicAuthorizationString.ps1
+
+
+function GetHTTPBasicAuthorizationString {
+    [CmdletBinding(DefaultParameterSetName = 'String')]
+    [OutputType([string], ParameterSetName = 'String')]
+    [OutputType([hashtable], ParameterSetName = 'Hashtable')]
+    param
+    (
+        [Parameter(Mandatory = $false)]
+        [pscredential]$Credential,
+        
+        [Parameter(ParameterSetName = 'Hashtable')]
+        [switch]$Hashtable
+    )
+    
+    if (-not $PSBoundParameters.ContainsKey('Credential')) {
+        if (-not ($Credential = Get-Credential -Message "Please provide credentials")) {
+            throw "You must provide credentials"
+        }
+    }
+    
+    $bytes = [System.Text.Encoding]::ASCII.GetBytes($("{0}:{1}" -f $Credential.UserName, $Credential.GetNetworkCredential().Password))
+    $base64 = [System.Convert]::ToBase64String($bytes)
+    
+    switch ($PSCmdlet.ParameterSetName) {
+        'Hashtable' {
+            [hashtable]@{
+                'Authorization' = "Basic $base64"
+            }
+            
+            break
+        }
+        
+        default {
+            "Basic $base64"
+        }
+    }
+}
+
+#endregion
+
 #region File Get-VivantioAPICredential.ps1
 
 function Get-VivantioAPICredential {
@@ -389,6 +431,14 @@ function Get-VivantioAPITimeout {
     }
 
     $script:VivantioPSConfig.Timeout
+}
+
+#endregion
+
+#region File GetVivantioConfigVariable.ps1
+
+function GetVivantioConfigVariable {
+    return $script:VivantioPSConfig
 }
 
 #endregion
@@ -1114,56 +1164,6 @@ function Get-VivantioAPIURIScheme {
 
 #endregion
 
-#region File GetHTTPBasicAuthorizationString.ps1
-
-
-function GetHTTPBasicAuthorizationString {
-    [CmdletBinding(DefaultParameterSetName = 'String')]
-    [OutputType([string], ParameterSetName = 'String')]
-    [OutputType([hashtable], ParameterSetName = 'Hashtable')]
-    param
-    (
-        [Parameter(Mandatory = $false)]
-        [pscredential]$Credential,
-        
-        [Parameter(ParameterSetName = 'Hashtable')]
-        [switch]$Hashtable
-    )
-    
-    if (-not $PSBoundParameters.ContainsKey('Credential')) {
-        if (-not ($Credential = Get-Credential -Message "Please provide credentials")) {
-            throw "You must provide credentials"
-        }
-    }
-    
-    $bytes = [System.Text.Encoding]::ASCII.GetBytes($("{0}:{1}" -f $Credential.UserName, $Credential.GetNetworkCredential().Password))
-    $base64 = [System.Convert]::ToBase64String($bytes)
-    
-    switch ($PSCmdlet.ParameterSetName) {
-        'Hashtable' {
-            [hashtable]@{
-                'Authorization' = "Basic $base64"
-            }
-            
-            break
-        }
-        
-        default {
-            "Basic $base64"
-        }
-    }
-}
-
-#endregion
-
-#region File GetVivantioConfigVariable.ps1
-
-function GetVivantioConfigVariable {
-    return $script:VivantioPSConfig
-}
-
-#endregion
-
 #region File InvokeVivantioRequest.ps1
 
 
@@ -1515,6 +1515,36 @@ function New-VivantioRPCQueryItem {
 
 #endregion
 
+#region File SetupVivantioConfigVariable.ps1
+
+function SetupVivantioConfigVariable {
+    [CmdletBinding()]
+    param
+    (
+        [switch]$Overwrite
+    )
+
+    Write-Verbose "Checking for VivantioConfig hashtable"
+    if (($null -eq $script:VivantioPSConfig) -or $Overwrite) {
+        Write-Verbose "Creating VivantioConfig hashtable"
+        $script:VivantioPSConfig = @{
+            'Connected' = $false
+            'ConnectedTimestamp' = $null
+            'URI'       = [pscustomobject]@{
+                'RPC' = $null
+                'OData' = $null
+            }
+            'Credential'         = $Null
+            'Timeout'            = $null
+            'Proxy' = $null
+        }
+    } else {
+        Write-Warning "Cannot overwrite VivantioConfig without -Overwrite parameter!"
+    }
+}
+
+#endregion
+
 #region File Set-VivantioAPICredential.ps1
 
 function Set-VivantioAPICredential {
@@ -1699,6 +1729,42 @@ function Set-VivantioODataURIScheme {
 
 #endregion
 
+#region File Set-VivantioRPCCustomForm.ps1
+
+
+function Set-VivantioRPCCustomForm {
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [uint64]$Id,
+        
+        [Parameter(Mandatory = $true)]
+        [psobject[]]$FieldValues
+    )
+    
+    begin {
+        $Segments = [System.Collections.ArrayList]::new(@('Entity', 'CustomEntityUpdate'))
+    }
+    
+    process {
+        $uri = BuildNewURI -Segments $Segments
+        
+        $Body = [pscustomobject]@{
+            'Id'          = $Id
+            'FieldValues' = [System.Collections.Arraylist]::new(@($FieldValues))
+        } | ConvertTo-Json -Compress -Depth 100
+        
+        InvokeVivantioRequest -URI $uri -Body $Body -BodyIsJSON -Method POST -Raw:$Raw
+    }
+    
+    end {
+        
+    }
+}
+
+#endregion
+
 #region File Set-VivantioRPCURI.ps1
 
 
@@ -1791,36 +1857,6 @@ function Set-VivantioAPIURIScheme {
     
         $script:VivantioPSConfig.URI.RPC.Scheme = $Scheme.ToLower()
         $script:VivantioPSConfig.URI.RPC.Scheme
-    }
-}
-
-#endregion
-
-#region File SetupVivantioConfigVariable.ps1
-
-function SetupVivantioConfigVariable {
-    [CmdletBinding()]
-    param
-    (
-        [switch]$Overwrite
-    )
-
-    Write-Verbose "Checking for VivantioConfig hashtable"
-    if (($null -eq $script:VivantioPSConfig) -or $Overwrite) {
-        Write-Verbose "Creating VivantioConfig hashtable"
-        $script:VivantioPSConfig = @{
-            'Connected' = $false
-            'ConnectedTimestamp' = $null
-            'URI'       = [pscustomobject]@{
-                'RPC' = $null
-                'OData' = $null
-            }
-            'Credential'         = $Null
-            'Timeout'            = $null
-            'Proxy' = $null
-        }
-    } else {
-        Write-Warning "Cannot overwrite VivantioConfig without -Overwrite parameter!"
     }
 }
 
