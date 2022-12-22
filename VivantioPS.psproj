@@ -2,6 +2,8 @@
   <Version>2.1</Version>
   <FileID>2ec329f1-0d52-4cdb-ada0-adacdd6dc584</FileID>
   <ProjectType>1</ProjectType>
+  <RememberPowerShellVersion>True</RememberPowerShellVersion>
+  <PowerShellVersion>Local Machine - PowerShell V7 (64 Bit)</PowerShellVersion>
   <Folders>
     <Folder>Functions\Setup</Folder>
     <Folder>Functions</Folder>
@@ -77,6 +79,7 @@
     <File Build="2" Shared="True" ReferenceFunction="Invoke-Add-VivantioRPCCustomFormInstance_ps1" ExportFunctions="False">Functions\CustomForms\RPC\Add-VivantioRPCCustomFormInstance.ps1</File>
     <File Build="2" Shared="True" ReferenceFunction="Invoke-New-VivantioRPCCustomFormFieldValue_ps1" ExportFunctions="False">Functions\CustomForms\RPC\New-VivantioRPCCustomFormFieldValue.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioODataClient_ps1" ExportFunctions="True">Functions\Clients\OData\Get-VivantioODataClient.ps1</File>
+    <File Build="2" Shared="True" ReferenceFunction="Invoke-Set-VivantioRPCCustomForm_ps1" ExportFunctions="False">Functions\CustomForms\RPC\Set-VivantioRPCCustomForm.ps1</File>
   </Files>
   <StartupScript></StartupScript>
 </Project>
