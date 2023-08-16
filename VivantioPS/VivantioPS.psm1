@@ -664,7 +664,7 @@ function Get-VivantioODataClient {
         
         Write-Verbose "Need to make $($Clients.NumRequests - 1) more requests"
         
-        for ($RequestCounter = 2; $RequestCounter -lt $Clients.NumRequests; $RequestCounter++) {
+        for ($RequestCounter = 1; $RequestCounter -lt $Clients.NumRequests; $RequestCounter++) {
             Write-Verbose "Request $($RequestCounter + 1) of $($Clients.NumRequests)"
             
             $PercentComplete = (($RequestCounter/$Clients.NumRequests) * 100)
