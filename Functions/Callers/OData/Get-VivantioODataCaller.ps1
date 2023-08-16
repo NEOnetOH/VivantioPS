@@ -51,6 +51,8 @@ function Get-VivantioODataCaller {
     
     if ($PSBoundParameters.ContainsKey('Skip')) {
         $Parameters['$skip'] = $Skip
+    } else {
+        $Parameters['$skip'] = 0
     }
     
     $uri = BuildNewURI -APIType OData -Segments $Segments -Parameters $Parameters
@@ -65,6 +67,7 @@ function Get-VivantioODataCaller {
     Write-Progress @paramWriteProgress
     Write-Verbose "Obtaining initial page of data"
     $RawData = InvokeVivantioRequest -URI $uri -Raw -ErrorAction Stop
+    Write-Verbose "Retrieved [$($RawData.value.count)] results"
     
     # Create a callers object to mimic the OData return object with some additional properties
     $Callers = [pscustomobject]@{
@@ -78,15 +81,22 @@ function Get-VivantioODataCaller {
     
     [void]$Callers.value.AddRange($RawData.value)
     
-    if ($All -and ($Callers.TotalCallers -gt 100)) {
+#    $SkipAndValuesMatch = Test-VivantioODataResultsCountMatchNextURLSkipParameter -NextLink $Callers.'@odata.nextLink' -Values $RawData.value -DetailedResults
+#    
+#    if (-not $SkipAndValuesMatch.Matches) {
+#        Write-Warning $("NextLink skip value [{0}] DOES NOT MATCH result count [{1}]" -f $SkipAndValuesMatch.SkipValue, $SkipAndValuesMatch.ValueCount)
+#    }
+    
+    if ($All -and ($Callers.TotalCallers -gt $RawData.value.Count)) {
         Write-Verbose "Looping to request all [$($Callers.TotalCallers)] results"
         
-        # Determine how many requests we need to make. We can only obtain 100 at a time.
+        # Determine how many requests we need to make
+        # Check the value count to request the next X amount
         $Remainder = 0
-        $Callers.NumRequests = [math]::DivRem($Callers.TotalCallers, 100, [ref]$Remainder)
+        $Callers.NumRequests = [math]::DivRem($Callers.TotalCallers, $RawData.value.count, [ref]$Remainder)
         
         if ($Remainder -ne 0) {
-            # The number of callers is not divisible by 100 without a remainder. Therefore we need at least 
+            # The number of callers is not divisible by $RawData.value.count without a remainder. Therefore we need at least 
             # one more request to retrieve all callers. 
             $Callers.NumRequests++
         }
@@ -98,19 +108,21 @@ function Get-VivantioODataCaller {
             
             $PercentComplete = (($RequestCounter/$Callers.NumRequests) * 100)
             $paramWriteProgress = @{
-                Id       = 1
-                Activity = "Obtaining Callers"
-                Status   = "Request {0} of {1} ({2:N2}% Complete)" -f $RequestCounter, $Callers.NumRequests, $PercentComplete
+                Id              = 1
+                Activity        = "Obtaining Callers"
+                Status          = "Request {0} of {1} ({2:N2}% Complete)" -f $RequestCounter, $Callers.NumRequests, $PercentComplete
                 PercentComplete = $PercentComplete
             }
             
             Write-Progress @paramWriteProgress
             
-            $Parameters['$skip'] = ($RequestCounter * 100)
+            $Parameters['$skip'] = ($RequestCounter * $RawData.value.count)
             
             $uri = BuildNewURI -APIType OData -Segments $Segments -Parameters $Parameters
             
             $RawData = InvokeVivantioRequest -URI $uri -Raw
+            Write-Verbose "Retrieved [$($RawData.value.count)] results"
+            
             $Callers.'@odata.nextLink' = $RawData.'@odata.nextLink'
             $Callers.value.AddRange($RawData.value)
         }
@@ -120,7 +132,6 @@ function Get-VivantioODataCaller {
     
     $Callers
 }
-
 
 
 
