@@ -498,6 +498,8 @@ function Get-VivantioODataCaller {
     
     if ($PSBoundParameters.ContainsKey('Skip')) {
         $Parameters['$skip'] = $Skip
+    } else {
+        $Parameters['$skip'] = 0
     }
     
     $uri = BuildNewURI -APIType OData -Segments $Segments -Parameters $Parameters
@@ -512,6 +514,7 @@ function Get-VivantioODataCaller {
     Write-Progress @paramWriteProgress
     Write-Verbose "Obtaining initial page of data"
     $RawData = InvokeVivantioRequest -URI $uri -Raw -ErrorAction Stop
+    Write-Verbose "Retrieved [$($RawData.value.count)] results"
     
     # Create a callers object to mimic the OData return object with some additional properties
     $Callers = [pscustomobject]@{
@@ -525,15 +528,22 @@ function Get-VivantioODataCaller {
     
     [void]$Callers.value.AddRange($RawData.value)
     
-    if ($All -and ($Callers.TotalCallers -gt 100)) {
+#    $SkipAndValuesMatch = Test-VivantioODataResultsCountMatchNextURLSkipParameter -NextLink $Callers.'@odata.nextLink' -Values $RawData.value -DetailedResults
+#    
+#    if (-not $SkipAndValuesMatch.Matches) {
+#        Write-Warning $("NextLink skip value [{0}] DOES NOT MATCH result count [{1}]" -f $SkipAndValuesMatch.SkipValue, $SkipAndValuesMatch.ValueCount)
+#    }
+    
+    if ($All -and ($Callers.TotalCallers -gt $RawData.value.Count)) {
         Write-Verbose "Looping to request all [$($Callers.TotalCallers)] results"
         
-        # Determine how many requests we need to make. We can only obtain 100 at a time.
+        # Determine how many requests we need to make
+        # Check the value count to request the next X amount
         $Remainder = 0
-        $Callers.NumRequests = [math]::DivRem($Callers.TotalCallers, 100, [ref]$Remainder)
+        $Callers.NumRequests = [math]::DivRem($Callers.TotalCallers, $RawData.value.count, [ref]$Remainder)
         
         if ($Remainder -ne 0) {
-            # The number of callers is not divisible by 100 without a remainder. Therefore we need at least 
+            # The number of callers is not divisible by $RawData.value.count without a remainder. Therefore we need at least 
             # one more request to retrieve all callers. 
             $Callers.NumRequests++
         }
@@ -545,19 +555,21 @@ function Get-VivantioODataCaller {
             
             $PercentComplete = (($RequestCounter/$Callers.NumRequests) * 100)
             $paramWriteProgress = @{
-                Id       = 1
-                Activity = "Obtaining Callers"
-                Status   = "Request {0} of {1} ({2:N2}% Complete)" -f $RequestCounter, $Callers.NumRequests, $PercentComplete
+                Id              = 1
+                Activity        = "Obtaining Callers"
+                Status          = "Request {0} of {1} ({2:N2}% Complete)" -f $RequestCounter, $Callers.NumRequests, $PercentComplete
                 PercentComplete = $PercentComplete
             }
             
             Write-Progress @paramWriteProgress
             
-            $Parameters['$skip'] = ($RequestCounter * 100)
+            $Parameters['$skip'] = ($RequestCounter * $RawData.value.count)
             
             $uri = BuildNewURI -APIType OData -Segments $Segments -Parameters $Parameters
             
             $RawData = InvokeVivantioRequest -URI $uri -Raw
+            Write-Verbose "Retrieved [$($RawData.value.count)] results"
+            
             $Callers.'@odata.nextLink' = $RawData.'@odata.nextLink'
             $Callers.value.AddRange($RawData.value)
         }
@@ -567,7 +579,6 @@ function Get-VivantioODataCaller {
     
     $Callers
 }
-
 
 
 
@@ -601,6 +612,8 @@ function Get-VivantioODataClient {
     
     if ($PSBoundParameters.ContainsKey('Skip')) {
         $Parameters['$skip'] = $Skip
+    } else {
+        $Parameters['$skip'] = 0
     }
     
     $uri = BuildNewURI -APIType OData -Segments $Segments -Parameters $Parameters
@@ -613,7 +626,9 @@ function Get-VivantioODataClient {
     }
     
     Write-Progress @paramWriteProgress
+    Write-Verbose "Obtaining initial page of data"
     $RawData = InvokeVivantioRequest -URI $uri -Raw -ErrorAction Stop
+    Write-Verbose "Retrieved [$($RawData.value.count)] results"
     
     # Create a Clients object to mimic the OData return object with some additional properties
     $Clients = [pscustomobject]@{
@@ -627,22 +642,31 @@ function Get-VivantioODataClient {
     
     [void]$Clients.value.AddRange($RawData.value)
     
-    if ($All -and ($Clients.TotalClients -gt 100)) {
+#    $SkipAndValuesMatch = Test-VivantioODataResultsCountMatchNextURLSkipParameter -NextLink $Results.'@odata.nextLink' -Values $RawData.value -DetailedResults
+#    
+#    if (-not $SkipAndValuesMatch.Matches) {
+#        Write-Warning $("NextLink skip value [{0}] DOES NOT MATCH result count [{1}]" -f $SkipAndValuesMatch.SkipValue, $SkipAndValuesMatch.ValueCount)
+#    }
+    
+    if ($All -and ($Clients.TotalClients -gt $RawData.value.Count)) {
         Write-Verbose "Looping to request all [$($Clients.TotalClients)] results"
         
-        # Determine how many requests we need to make. We can only obtain 100 at a time.
+        # Determine how many requests we need to make
+        # Check the value count to request the next X amount
         $Remainder = 0
-        $Clients.NumRequests = [math]::DivRem($Clients.TotalClients, 100, [ref]$Remainder)
+        $Clients.NumRequests = [math]::DivRem($Clients.TotalClients, $RawData.value.count, [ref]$Remainder)
         
         if ($Remainder -ne 0) {
-            # The number of Clients is not divisible by 100 without a remainder. Therefore we need at least 
+            # The number of Clients is not divisible by $RawData.value.count without a remainder. Therefore we need at least 
             # one more request to retrieve all Clients. 
             $Clients.NumRequests++
         }
         
         Write-Verbose "Need to make $($Clients.NumRequests - 1) more requests"
         
-        for ($RequestCounter = 1; $RequestCounter -lt $Clients.NumRequests; $RequestCounter++) {
+        for ($RequestCounter = 2; $RequestCounter -lt $Clients.NumRequests; $RequestCounter++) {
+            Write-Verbose "Request $($RequestCounter + 1) of $($Clients.NumRequests)"
+            
             $PercentComplete = (($RequestCounter/$Clients.NumRequests) * 100)
             $paramWriteProgress = @{
                 Id              = 1
@@ -653,11 +677,13 @@ function Get-VivantioODataClient {
             
             Write-Progress @paramWriteProgress
             
-            $Parameters['$skip'] = ($RequestCounter * 100)
+            $Parameters['$skip'] = ($RequestCounter * $RawData.value.count)
             
             $uri = BuildNewURI -APIType OData -Segments $Segments -Parameters $Parameters
             
             $RawData = InvokeVivantioRequest -URI $uri -Raw
+            Write-Verbose "Retrieved [$($RawData.value.count)] results"
+            
             $Clients.'@odata.nextLink' = $RawData.'@odata.nextLink'
             $Clients.value.AddRange($RawData.value)
         }
@@ -1859,6 +1885,71 @@ function Set-VivantioAPIURIScheme {
         $script:VivantioPSConfig.URI.RPC.Scheme
     }
 }
+
+#endregion
+
+#region File Test-VivantioODataResultsCountMatchNextURLSkipParameter.ps1
+
+
+function Test-VivantioODataResultsCountMatchNextURLSkipParameter {
+    [CmdletBinding(DefaultParameterSetName = 'BooleanResult')]
+    [OutputType([boolean], ParameterSetName = 'BooleanResult')]
+    [OutputType([pscustomobject], ParameterSetName = 'DetailedResults')]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [string]$NextLink,
+        
+        [Parameter(Mandatory = $true)]
+        [object[]]$Values,
+        
+        [Parameter(ParameterSetName = 'DetailedResults')]
+        [switch]$DetailedResults
+    )
+    
+    Write-Verbose "Testing result count matches skip parameter"
+    
+    try {
+        $URIBuilder = [System.UriBuilder]::new($NextLink)
+    } catch {
+        throw "Cannot convert link to URI: $($_.Exception.Message)"
+    }
+    
+    try {
+        $QueryParameters = [System.Web.HttpUtility]::ParseQueryString($URIBuilder.Query)
+    } catch {
+        throw "Failed to parse query string [$($URIBuilder.Query)]: $($_.Exception.Message)"
+    }
+    
+    if ($QueryParameters -inotcontains '$skip') {
+        throw "Query does not contain a '`$skip' parameter"
+    }
+    
+    $Assertion = $QueryParameters['$skip'] -eq @($Values).Count
+    
+    Write-Verbose "Skip value = $($QueryParameters['$skip']) | Values count = $(@($Values).Count)"
+    
+    switch ($PSCmdlet.ParameterSetName) {
+        'BooleanResult' {
+            return $Assertion
+        }
+        
+        'DetailedResults' {
+            [pscustomobject]@{
+                'Matches'         = $Assertion
+                'NextLink'        = $NextLink
+                'SkipValue'       = $QueryParameters['$skip']
+                'ValueCount'      = $Values.Count
+                'URIBuilder'      = $URIBuilder
+                'QueryParameters' = $QueryParameters
+            }
+        }
+    }
+}
+
+
+
+
 
 #endregion
 
