@@ -80,7 +80,7 @@
     <File Build="2" Shared="True" ReferenceFunction="Invoke-New-VivantioRPCCustomFormFieldValue_ps1" ExportFunctions="False">Functions\CustomForms\RPC\New-VivantioRPCCustomFormFieldValue.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioODataClient_ps1" ExportFunctions="True">Functions\Clients\OData\Get-VivantioODataClient.ps1</File>
     <File Build="2" Shared="True" ReferenceFunction="Invoke-Set-VivantioRPCCustomForm_ps1" ExportFunctions="False">Functions\CustomForms\RPC\Set-VivantioRPCCustomForm.ps1</File>
-    <File Build="2" Shared="True" ReferenceFunction="Invoke-Test-VivantioODataResultsCountMatchNextURLSkipParameter_ps1" ExportFunctions="False">Functions\Helpers\Test-VivantioODataResultsCountMatchNextURLSkipParameter.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-Test-VivantioODataResultsCountMatchNextURLSkipParameter_ps1" ExportFunctions="True">Functions\Helpers\Test-VivantioODataResultsCountMatchNextURLSkipParameter.ps1</File>
   </Files>
   <StartupScript></StartupScript>
 </Project>
