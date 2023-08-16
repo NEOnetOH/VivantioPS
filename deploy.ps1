@@ -176,8 +176,8 @@ if ($ResetCurrentEnvironment) {
     Write-Host " Reimporting module"
     Import-Module $PSM1OutputPath, $PSD1OutputPath -Force -ErrorAction Stop
     
-    Write-Host " Connecting to VivantioAPI"
-    Connect-VivantioAPI -Credential $VivantioAPICredential -ODataURI 'https://neonet.vivantio.com/odata/' -RPCURI 'https://webservices-na01.vivantio.com/api/' -ErrorAction Stop
+    Write-Host " Ready to re-connect to VivantioAPI"
+    #Connect-VivantioAPI -Credential $VivantioAPICredential -ODataURI 'https://neonet.vivantio.com/odata/' -RPCURI 'https://webservices-na01.vivantio.com/api/' -ErrorAction Stop
     
     Write-Host "Reset complete" -ForegroundColor Green
 }
