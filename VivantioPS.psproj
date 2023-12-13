@@ -22,6 +22,10 @@
     <Folder>Functions\CustomForms\RPC</Folder>
     <Folder>Functions\Query\RPC</Folder>
     <Folder>Functions\Clients\OData</Folder>
+    <Folder>Functions\Tickets\RPC</Folder>
+    <Folder>Functions\Tickets</Folder>
+    <Folder>Functions\Configuration</Folder>
+    <Folder>Functions\Configuration\RPC</Folder>
   </Folders>
   <Files>
     <File Build="2">VivantioPS.psd1</File>
@@ -81,6 +85,10 @@
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioODataClient_ps1" ExportFunctions="True">Functions\Clients\OData\Get-VivantioODataClient.ps1</File>
     <File Build="2" Shared="True" ReferenceFunction="Invoke-Set-VivantioRPCCustomForm_ps1" ExportFunctions="False">Functions\CustomForms\RPC\Set-VivantioRPCCustomForm.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Test-VivantioODataResultsCountMatchNextURLSkipParameter_ps1" ExportFunctions="True">Functions\Helpers\Test-VivantioODataResultsCountMatchNextURLSkipParameter.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCTicket_ps1" ExportFunctions="True">Functions\Tickets\RPC\Get-VivantioRPCTicket.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-New-VivantioRPCTicket_ps1" ExportFunctions="True">Functions\Tickets\RPC\New-VivantioRPCTicket.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-Set-VivantioRPCTicket_ps1" ExportFunctions="True">Functions\Tickets\RPC\Set-VivantioRPCTicket.ps1</File>
+    <File Build="2" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCTicketType_ps1" ExportFunctions="False">Functions\Configuration\RPC\Get-VivantioRPCTicketType.ps1</File>
   </Files>
   <StartupScript></StartupScript>
 </Project>
