@@ -866,7 +866,7 @@ function Get-VivantioRPCClient {
     [CmdletBinding(DefaultParameterSetName = 'SelectById')]
     param
     (
-        [Parameter(ParameterSetName = 'Select',
+        [Parameter(ParameterSetName = 'Query',
                    Mandatory = $true)]
         [object]$Query,
         
@@ -875,14 +875,6 @@ function Get-VivantioRPCClient {
                    ValueFromPipeline = $true,
                    ValueFromPipelineByPropertyName = $true)]
         [uint64[]]$Id,
-        
-        [Parameter(ParameterSetName = 'SelectByQueue',
-                   Mandatory = $true)]
-        [object]$Queue,
-        
-        [Parameter(ParameterSetName = 'SelectPage',
-                   Mandatory = $true)]
-        [hashtable]$Page,
         
         [switch]$Raw
     )
@@ -893,8 +885,8 @@ function Get-VivantioRPCClient {
     
     process {
         switch ($PSCmdlet.ParameterSetName) {
-            'Select' {
-                [void]$Segments.Add($_)
+            'Query' {
+                [void]$Segments.Add('Select')
                 
                 $uri = BuildNewURI -Segments $Segments
                 
@@ -915,13 +907,19 @@ function Get-VivantioRPCClient {
             }
             
             'SelectById' {
-                [void]$Segments.Add('SelectList')
-                
                 Write-Verbose "$(@($Value).Count) IDs to select"
-                $IDListJSON = ,@($Id) | ConvertTo-Json -Compress
+                
+                if (@($Id).Count -eq 1) {
+                    [void]$Segments.AddRange(@('SelectById', $Id))
+                    $Body = @{} | ConvertTo-Json -Compress
+                } else {
+                    [void]$Segments.Add('SelectList')
+                    $Body = @($Id) | ConvertTo-Json -Compress
+                }
+                
                 $uri = BuildNewURI -Segments $Segments
                 
-                InvokeVivantioRequest -URI $uri -Body $IDListJSON -BodyIsJSON -Raw:$Raw -Method POST
+                InvokeVivantioRequest -URI $uri -Body $Body -BodyIsJSON -Raw:$Raw -Method POST
                 
                 break
             }
