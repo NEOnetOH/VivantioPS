@@ -61,16 +61,16 @@
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioODataURI_ps1" ExportFunctions="True">Functions\Setup\Get-VivantioODataURI.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCURI_ps1" ExportFunctions="True">Functions\Setup\Get-VivantioRPCURI.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Set-VivantioRPCURI_ps1" ExportFunctions="True">Functions\Setup\Set-VivantioRPCURI.ps1</File>
-    <File Build="2" Shared="True" ReferenceFunction="Invoke-Set-VivantioODataURI_ps1" ExportFunctions="False">Functions\Setup\Set-VivantioODataURI.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-Set-VivantioODataURI_ps1" ExportFunctions="True">Functions\Setup\Set-VivantioODataURI.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-GetHTTPBasicAuthorizationString_ps1" ExportFunctions="True">Functions\Helpers\GetHTTPBasicAuthorizationString.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-VerifyODataConnectivity_ps1" ExportFunctions="False">Functions\Setup\Support\VerifyODataConnectivity.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-New-VivantioODataFilter_ps1" ExportFunctions="True">Functions\Callers\OData\New-VivantioODataFilter.ps1</File>
-    <File Build="2" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCClient_ps1" ExportFunctions="False">Functions\Clients\RPC\Get-VivantioRPCClient.ps1</File>
-    <File Build="2" Shared="True" ReferenceFunction="Invoke-Set-VivantioAPIProxy_ps1" ExportFunctions="False">Functions\Setup\Set-VivantioAPIProxy.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCClient_ps1" ExportFunctions="True">Functions\Clients\RPC\Get-VivantioRPCClient.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-Set-VivantioAPIProxy_ps1" ExportFunctions="True">Functions\Setup\Set-VivantioAPIProxy.ps1</File>
     <File Build="2" Shared="True" ReferenceFunction="Invoke-VivantioQuery_Class_ps1" ExportFunctions="True">Classes\VivantioQuery.Class.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-VivantioQueryItem_Class_ps1" ExportFunctions="True">Classes\VivantioQueryItem.Class.ps1</File>
-    <File Build="2" Shared="True" ReferenceFunction="Invoke-New-VivantioRPCQueryItem_ps1" ExportFunctions="False">Functions\Query\RPC\New-VivantioRPCQueryItem.ps1</File>
-    <File Build="2" Shared="True" ReferenceFunction="Invoke-New-VivantioRPCQuery_ps1" ExportFunctions="False">Functions\Query\RPC\New-VivantioRPCQuery.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-New-VivantioRPCQueryItem_ps1" ExportFunctions="True">Functions\Query\RPC\New-VivantioRPCQueryItem.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-New-VivantioRPCQuery_ps1" ExportFunctions="True">Functions\Query\RPC\New-VivantioRPCQuery.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-VivantioQueryOperator_Enum_ps1" ExportFunctions="True">Enums\VivantioQueryOperator.Enum.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-VivantioQueryMode_Enum_ps1" ExportFunctions="True">Enums\VivantioQueryMode.Enum.ps1</File>
     <File Build="2" Shared="True" ReferenceFunction="Invoke-BuildCustomClasses_ps1" ExportFunctions="False">BuildCustomClasses.ps1</File>
@@ -79,16 +79,17 @@
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCCustomFormDefinition_ps1" ExportFunctions="True">Functions\CustomForms\RPC\Get-VivantioRPCCustomFormDefinition.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCCustomFormInstance_ps1" ExportFunctions="True">Functions\CustomForms\RPC\Get-VivantioRPCCustomFormInstance.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCCustomFormFieldDefinition_ps1" ExportFunctions="True">Functions\CustomForms\RPC\Get-VivantioRPCCustomFormFieldDefinition.ps1</File>
-    <File Build="2" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCCaller_ps1" ExportFunctions="False">Functions\Callers\RPC\Get-VivantioRPCCaller.ps1</File>
-    <File Build="2" Shared="True" ReferenceFunction="Invoke-Add-VivantioRPCCustomFormInstance_ps1" ExportFunctions="False">Functions\CustomForms\RPC\Add-VivantioRPCCustomFormInstance.ps1</File>
-    <File Build="2" Shared="True" ReferenceFunction="Invoke-New-VivantioRPCCustomFormFieldValue_ps1" ExportFunctions="False">Functions\CustomForms\RPC\New-VivantioRPCCustomFormFieldValue.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCCaller_ps1" ExportFunctions="True">Functions\Callers\RPC\Get-VivantioRPCCaller.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-Add-VivantioRPCCustomFormInstance_ps1" ExportFunctions="True">Functions\CustomForms\RPC\Add-VivantioRPCCustomFormInstance.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-New-VivantioRPCCustomFormFieldValue_ps1" ExportFunctions="True">Functions\CustomForms\RPC\New-VivantioRPCCustomFormFieldValue.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioODataClient_ps1" ExportFunctions="True">Functions\Clients\OData\Get-VivantioODataClient.ps1</File>
-    <File Build="2" Shared="True" ReferenceFunction="Invoke-Set-VivantioRPCCustomForm_ps1" ExportFunctions="False">Functions\CustomForms\RPC\Set-VivantioRPCCustomForm.ps1</File>
-    <File Build="0" Shared="True" ReferenceFunction="Invoke-Test-VivantioODataResultsCountMatchNextURLSkipParameter_ps1" ExportFunctions="True">Functions\Helpers\Test-VivantioODataResultsCountMatchNextURLSkipParameter.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-Set-VivantioRPCCustomForm_ps1" ExportFunctions="True">Functions\CustomForms\RPC\Set-VivantioRPCCustomForm.ps1</File>
+    <File Build="2" Shared="True" ReferenceFunction="Invoke-Test-VivantioODataResultsCountMatchNextURLSkipParameter_ps1" ExportFunctions="True">Functions\Helpers\Test-VivantioODataResultsCountMatchNextURLSkipParameter.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCTicket_ps1" ExportFunctions="True">Functions\Tickets\RPC\Get-VivantioRPCTicket.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-New-VivantioRPCTicket_ps1" ExportFunctions="True">Functions\Tickets\RPC\New-VivantioRPCTicket.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Set-VivantioRPCTicket_ps1" ExportFunctions="True">Functions\Tickets\RPC\Set-VivantioRPCTicket.ps1</File>
-    <File Build="2" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCTicketType_ps1" ExportFunctions="False">Functions\Configuration\RPC\Get-VivantioRPCTicketType.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCTicketType_ps1" ExportFunctions="True">Functions\Configuration\RPC\Get-VivantioRPCTicketType.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-New-VivantioRPCTicketUpdateRequest_ps1" ExportFunctions="True">Functions\Tickets\RPC\New-VivantioRPCTicketUpdateRequest.ps1</File>
   </Files>
   <StartupScript></StartupScript>
 </Project>
