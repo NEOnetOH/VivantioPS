@@ -32,8 +32,7 @@ function Get-VivantioRPCTicketType {
     [CmdletBinding(DefaultParameterSetName = 'All')]
     param
     (
-        [Parameter(ParameterSetName = 'All',
-                   Mandatory = $true)]
+        [Parameter(ParameterSetName = 'All')]
         [switch]$All,
         
         [Parameter(ParameterSetName = 'SelectById',
@@ -65,6 +64,7 @@ function Get-VivantioRPCTicketType {
                 
                 break
             }
+            
             'SelectById' {
                 [void]$Segments.AddRange(@('TicketTypeSelectById', $TypeId))
                 
@@ -80,6 +80,7 @@ function Get-VivantioRPCTicketType {
                 
                 break
             }
+            
             'SelectByTicketId' {
                 [void]$Segments.Add('TicketTypeSelectByTicketIds')
                 
