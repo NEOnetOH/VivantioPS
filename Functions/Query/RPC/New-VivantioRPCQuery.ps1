@@ -13,9 +13,6 @@ function New-VivantioRPCQuery {
     .PARAMETER Items
         A collection of QueryItems from New-VivantioRPCQueryItem
     
-    .PARAMETER JSON
-        Providing JSON filter will use the JSON as-is as the query
-    
     .EXAMPLE
         PS C:\> New-VivantioAPIQuery 
                 -Mode 'MatchAll' 
@@ -45,10 +42,7 @@ function New-VivantioRPCQuery {
         [Parameter(ParameterSetName = 'Default',
                    Mandatory = $true,
                    Position = 1)]
-        [pscustomobject[]]$Items,
-        
-        [Parameter(ParameterSetName = 'JSON')]
-        [string]$JSON
+        [pscustomobject[]]$Items
     )
     
     switch ($PSCmdlet.ParameterSetName) {
