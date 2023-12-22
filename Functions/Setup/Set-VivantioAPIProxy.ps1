@@ -1,4 +1,4 @@
-
+﻿
 function Set-VivantioAPIProxy {
     [CmdletBinding()]
     param
@@ -8,7 +8,7 @@ function Set-VivantioAPIProxy {
         [AllowEmptyString()]
         [string]$ProxyURI
     )
-    
+
     if ([string]::IsNullOrWhiteSpace($ProxyURI)) {
         $script:VivantioPSConfig['Proxy'] = $null
     } else {

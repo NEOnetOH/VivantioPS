@@ -13,7 +13,7 @@
         if ($Scheme -ieq 'http') {
             Write-Warning "Connecting to OData via insecure HTTP is not recommended!"
         }
-    
+
         $script:VivantioPSConfig.URI.OData.Scheme = $Scheme.ToLower()
         $script:VivantioPSConfig.URI.OData.Scheme
     }

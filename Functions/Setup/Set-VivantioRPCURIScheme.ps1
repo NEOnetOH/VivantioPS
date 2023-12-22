@@ -13,7 +13,7 @@
         if ($Scheme -eq 'http') {
             Write-Warning "Connecting to API via insecure HTTP is not recommended!"
         }
-    
+
         $script:VivantioPSConfig.URI.RPC.Scheme = $Scheme.ToLower()
         $script:VivantioPSConfig.URI.RPC.Scheme
     }
