@@ -66,7 +66,7 @@ Write-Host "Beginning deployment" -ForegroundColor Green
 
 Write-Host "Importing required modules" -ForegroundColor Green
 
-Import-Module "Microsoft.PowerShell.Utility" -ErrorAction Stop
+Import-Module "PSScriptAnalyzer", "Microsoft.PowerShell.Utility" -ErrorAction Stop
 
 $ModuleName = 'VivantioPS'
 $ConcatenatedFilePath = "$PSScriptRoot\concatenated.ps1"
@@ -77,10 +77,12 @@ $PSM1OutputPath = "$OutputDirectory\$ModuleName.psm1"
 
 $PS1FunctionFiles = Get-ChildItem $FunctionPath -Filter "*.ps1" -Recurse | Sort-Object Name
 
+Write-Host "Removing whitespace from files" -ForegroundColor Green
+Invoke-ScriptAnalyzer -Path $FunctionPath -IncludeRule 'PSAvoidTrailingWhitespace' -Recurse -Fix
+Write-Host "Concatenating [$($PS1FunctionFiles.Count)] PS1 files from $FunctionPath"
 "" | Out-File -FilePath $ConcatenatedFilePath -Encoding utf8
 
 $Counter = 0
-Write-Host "Concatenating [$($PS1FunctionFiles.Count)] PS1 files from $FunctionPath"
 foreach ($File in $PS1FunctionFiles) {
     $Counter++
 
@@ -100,14 +102,6 @@ foreach ($File in $PS1FunctionFiles) {
 
 "" | Out-File -FilePath $ConcatenatedFilePath -Encoding utf8 -Append
 
-if (-not (Test-Path $OutputDirectory)) {
-    try {
-        Write-Warning "Creating path [$OutputDirectory]"
-        $null = New-Item -Path $OutputDirectory -ItemType Directory -Force
-    } catch {
-        throw "Failed to create output directory [$OutputDirectory]: $($_.Exception.Message)"
-    }
-}
 
 Write-Host "Adding psm1"
 Get-Content "$PSScriptRoot\$ModuleName.psm1" | Out-File -FilePath $ConcatenatedFilePath -Encoding UTF8 -Append
@@ -162,6 +156,16 @@ switch ($PSCmdlet.ParameterSetName) {
 Write-Host "Updating Module Manifest"
 Update-ModuleManifest @UpdateModuleManifestSplat
 
+Write-Host " Removing trailing whitespaces from psd1"
+Invoke-ScriptAnalyzer -Path $UpdateModuleManifestSplat.Path -IncludeRule 'PSAvoidTrailingWhitespace' -Fix
+if (-not (Test-Path $OutputDirectory)) {
+    try {
+        Write-Warning "Creating output directory [$OutputDirectory]"
+        $null = New-Item -Path $OutputDirectory -ItemType Directory -Force
+    } catch {
+        throw "Failed to create output directory [$OutputDirectory]: $($_.Exception.Message)"
+    }
+}
 Write-Host "Copying psd1"
 Copy-Item -Path "$PSScriptRoot\$ModuleName.psd1" -Destination $PSD1OutputPath -Force
 
@@ -172,6 +176,9 @@ Write-Host "Deployment complete" -ForegroundColor Green
 
 if ($ResetCurrentEnvironment) {
     Write-Warning "Running commands to reset current environment"
+    if (Get-Module 'VivantioPS') {
+        Remove-Module VivantioPS -Force
+    }
     
     Write-Host " Reimporting module"
     Import-Module $PSM1OutputPath, $PSD1OutputPath -Force -ErrorAction Stop

@@ -7,7 +7,7 @@
         [Parameter(Mandatory = $true)]
         [string]$Host
     )
-    
+
     if ($PSCmdlet.ShouldProcess('Vivantio OData URI Host', 'Set')) {
         $script:VivantioPSConfig.URI.OData.Host = $Host.Trim()
         $script:VivantioPSConfig.URI.OData.Host

@@ -84,12 +84,16 @@
     <File Build="0" Shared="True" ReferenceFunction="Invoke-New-VivantioRPCCustomFormFieldValue_ps1" ExportFunctions="True">Functions\CustomForms\RPC\New-VivantioRPCCustomFormFieldValue.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioODataClient_ps1" ExportFunctions="True">Functions\Clients\OData\Get-VivantioODataClient.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Set-VivantioRPCCustomForm_ps1" ExportFunctions="True">Functions\CustomForms\RPC\Set-VivantioRPCCustomForm.ps1</File>
-    <File Build="2" Shared="True" ReferenceFunction="Invoke-Test-VivantioODataResultsCountMatchNextURLSkipParameter_ps1" ExportFunctions="True">Functions\Helpers\Test-VivantioODataResultsCountMatchNextURLSkipParameter.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-Test-VivantioODataResultsCountMatchNextURLSkipParameter_ps1" ExportFunctions="True">Functions\Helpers\Test-VivantioODataResultsCountMatchNextURLSkipParameter.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCTicket_ps1" ExportFunctions="True">Functions\Tickets\RPC\Get-VivantioRPCTicket.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-New-VivantioRPCTicket_ps1" ExportFunctions="True">Functions\Tickets\RPC\New-VivantioRPCTicket.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Set-VivantioRPCTicket_ps1" ExportFunctions="True">Functions\Tickets\RPC\Set-VivantioRPCTicket.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCTicketType_ps1" ExportFunctions="True">Functions\Configuration\RPC\Get-VivantioRPCTicketType.ps1</File>
     <File Build="0" Shared="True" ReferenceFunction="Invoke-New-VivantioRPCTicketUpdateRequest_ps1" ExportFunctions="True">Functions\Tickets\RPC\New-VivantioRPCTicketUpdateRequest.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCEmailTemplate_ps1" ExportFunctions="True">Functions\Configuration\RPC\Get-VivantioRPCEmailTemplate.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-Get-VivantioRPCUser_ps1" ExportFunctions="True">Functions\Configuration\RPC\Get-VivantioRPCUser.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-Set-VivantioRPCTicketStatus_ps1" ExportFunctions="True">Functions\Tickets\RPC\Set-VivantioRPCTicketStatus.ps1</File>
+    <File Build="0" Shared="True" ReferenceFunction="Invoke-Add-VivantioRPCTicketNote_ps1" ExportFunctions="True">Functions\Tickets\RPC\Add-VivantioRPCTicketNote.ps1</File>
   </Files>
   <StartupScript></StartupScript>
 </Project>
