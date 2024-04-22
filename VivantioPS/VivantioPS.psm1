@@ -52,6 +52,57 @@ function Add-VivantioRPCCustomFormInstance {
 
 #endregion
 
+#region File Add-VivantioRPCTicketAttachment.ps1
+
+function Add-VivantioRPCTicketAttachment {
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [uint64]$TicketId,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [System.IO.FileInfo]$FilePath,
+
+        [Parameter()]
+        [ValidateSet('Article', 'Asset', 'Caller', 'Client', 'Location', 'Ticket', IgnoreCase = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$SystemArea = 'Ticket',
+
+        [Parameter()]
+        [string]$Description,
+
+        [switch]$MarkPrivate
+    )
+
+    begin {
+        $Segments = [System.Collections.ArrayList]::new(@('File', 'AttachmentUpload'))
+    }
+
+    process {
+        if (-not (Test-Path -Path $FilePath.FullName)) {
+            throw "File not found: $($FilePath.FullName)"
+        }
+
+        $uri = BuildNewURI -Segments $Segments
+
+        $Body = [pscustomobject]@{
+            'ParentId'    = $TicketId
+            'SystemArea'  = $SystemArea
+            'Description' = $Description
+            'IsPrivate'   = $MarkPrivate.ToString()
+            'FileName'    = $FilePath.Name
+            'Content'     = [System.IO.File]::ReadAllBytes($FilePath.FullName)
+        }
+
+        InvokeVivantioRequest -URI $uri -Body $Body -Method POST
+    }
+}
+
+#endregion
+
 #region File Add-VivantioRPCTicketNote.ps1
 
 
@@ -2099,7 +2150,7 @@ function New-VivantioRPCTicket {
         Database ID of the group to assign the ticket
 
     .PARAMETER OwnerId
-       Database ID of the user to assign the ticket
+        Database ID of the user to assign the ticket
 
     .EXAMPLE
         PS C:\> New-VivantioRPCTicket -RecordTypeId $value1 -ClientId $value2 -CallerId $value3 -CategoryId $value4
