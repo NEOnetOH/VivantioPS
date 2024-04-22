@@ -31,7 +31,7 @@
         Database ID of the group to assign the ticket
 
     .PARAMETER OwnerId
-       Database ID of the user to assign the ticket
+        Database ID of the user to assign the ticket
 
     .EXAMPLE
         PS C:\> New-VivantioRPCTicket -RecordTypeId $value1 -ClientId $value2 -CallerId $value3 -CategoryId $value4
