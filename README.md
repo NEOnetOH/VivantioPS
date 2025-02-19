@@ -14,10 +14,18 @@ Module for interacting with Vivantio APIs (both RPC and OData)
  3. Do things!
     ```Powershell
     Get-VivantioRPCClient -Id 30
+
+
+   $ClientQueryItems = @(
+      New-VivantioRPCQueryItem -FieldName 'StatusName' -Operator 'Equals' -Value 'Active'
+      New-VivantioRPCQueryItem -FieldName 'CategoryId' -Operator 'DoesNotEqual' -Value 1234
+   )
+   $ClientQuery = New-VivantioRPCQuery -Mode MatchAll -Items $ClientQueryItems
+   $Clients = Get-VivantioRPCClient -Query $ClientQuery
     ```
-    
+
 # Custom Entities/Custom Forms
-It is important to understand the structure of `CustomEntityDefinitions` and how they relate to `FieldDefinitions`, 
+It is important to understand the structure of `CustomEntityDefinitions` and how they relate to `FieldDefinitions`,
 `FieldOptions`, and `Entities`:
 
  1. Custom Entity Definitions are created system wide with the following relevent properties:
@@ -28,4 +36,7 @@ It is important to understand the structure of `CustomEntityDefinitions` and how
         - An array of `FieldDefinitions`
     - RecordTypeId
         - The associated area of Vivantio by Id (Caller, Client, Ticket, etc..)
-    
+
+
+# RPC API Documentation
+https://webservices-na01.vivantio.com/help/

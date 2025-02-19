@@ -1,38 +1,38 @@
 <#
     .SYNOPSIS
         Concatenate files into single PSM1 and PSD1 files
-    
+
     .DESCRIPTION
         Concatenate all ps1 files in the Functions directory, plus the root PSM1,
         into a single PSM1 file in the VivantioPS directory.
-        
+
         By default, this script will increment version by 0.0.1
-    
+
     .PARAMETER SkipVersion
         Do not increment the version.
-    
+
     .PARAMETER VersionIncrease
         Increase the version by a user defined amount
-    
+
     .PARAMETER NewVersion
         Override the new version with this version
-    
+
     .PARAMETER Environment
         A description of the Environment parameter.
-    
+
     .PARAMETER ResetCurrentEnvironment
         A description of the ResetCurrentEnvironment parameter.
-    
+
     .EXAMPLE
         Use all defaults and concatenate all files
-        
+
         .\deploy.ps1
-    
+
     .EXAMPLE
         Increment the version by 0.2.0. Given version 1.2.0, the resulting version will be 1.4.0
-        
+
         .\deploy.ps1 -VersionIncrease 0.2.0
-    
+
     .NOTES
         ===========================================================================
         Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2020 v5.7.174
@@ -49,16 +49,16 @@ param
 (
     [Parameter(ParameterSetName = 'SkipVersion')]
     [switch]$SkipVersion,
-    
+
     [Parameter(ParameterSetName = 'IncreaseVersion')]
     [version]$VersionIncrease = "0.0.1",
-    
+
     [Parameter(ParameterSetName = 'SetVersion')]
     [version]$NewVersion,
-    
+
     [ValidateSet('dev', 'development', 'prod', 'production', IgnoreCase = $true)]
     [string]$Environment = 'development',
-    
+
     [switch]$ResetCurrentEnvironment
 )
 
@@ -92,6 +92,8 @@ foreach ($File in $PS1FunctionFiles) {
         "`r`n#region File $($File.Name)`r`n" | Out-File -FilePath $ConcatenatedFilePath -Encoding utf8 -Append -ErrorAction Stop
 
         Get-Content $File.FullName -Encoding UTF8 -ErrorAction Stop | Out-File -FilePath $ConcatenatedFilePath -Encoding utf8 -Append -ErrorAction Stop
+
+        #Start-sleep -Milliseconds 100
 
         "`r`n#endregion" | Out-File -FilePath $ConcatenatedFilePath -Encoding utf8 -Append -ErrorAction Stop
     } catch {
@@ -127,28 +129,28 @@ switch ($PSCmdlet.ParameterSetName) {
     "SkipVersion" {
         # Dont do anything with the PSD
         Write-Host " Skipping version update, maintaining version [$CurrentVersion]"
-        
+
         break
     }
-    
+
     "IncreaseVersion" {
         # Calculate the new version
         [version]$NewVersion = "{0}.{1}.{2}" -f ($CurrentVersion.Major + $VersionIncrease.Major), ($CurrentVersion.Minor + $VersionIncrease.Minor), ($CurrentVersion.Build + $VersionIncrease.Build)
-        
+
         Write-Host " Updating version from [$CurrentVersion] to [$NewVersion]"
-        
+
         # Replace the version number in the content
         $UpdateModuleManifestSplat['ModuleVersion'] = $NewVersion
-        
+
         break
     }
-    
+
     "SetVersion" {
         Write-Host " Updating version from [$CurrentVersion] to [$NewVersion]"
-        
+
         # Replace the version number in the content
         $UpdateModuleManifestSplat['ModuleVersion'] = $NewVersion
-        
+
         break
     }
 }
@@ -179,13 +181,13 @@ if ($ResetCurrentEnvironment) {
     if (Get-Module 'VivantioPS') {
         Remove-Module VivantioPS -Force
     }
-    
+
     Write-Host " Reimporting module"
     Import-Module $PSM1OutputPath, $PSD1OutputPath -Force -ErrorAction Stop
-    
+
     Write-Host " Ready to re-connect to VivantioAPI"
     #Connect-VivantioAPI -Credential $VivantioAPICredential -ODataURI 'https://neonet.vivantio.com/odata/' -RPCURI 'https://webservices-na01.vivantio.com/api/' -ErrorAction Stop
-    
+
     Write-Host "Reset complete" -ForegroundColor Green
 }
 

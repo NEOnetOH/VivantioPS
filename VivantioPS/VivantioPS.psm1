@@ -400,6 +400,106 @@ function Clear-VivantioAPIProxy {
 
 #endregion
 
+#region File Close-VivantioRPCTicket.ps1
+
+function Close-VivantioRPCTicket {
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [uint64]$TicketId,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$Solution,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [uint64]$CloseStatusId,
+
+        [Parameter()]
+        [ValidateNotNullOrEmpty()]
+        [string]$Notes,
+
+        [Parameter()]
+        [switch]$EmailCustomer,
+
+        [Parameter()]
+        [ValidateNotNullOrEmpty()]
+        [uint64]$CustomerEmailTemplateId,
+
+        [Parameter()]
+        [ValidateNotNullOrEmpty()]
+        [uint64[]]$AttachmentId,
+
+        [switch]$MarkPrivate
+
+    )
+
+    begin {
+        $Segments = [System.Collections.ArrayList]::new(@('Ticket', 'Close'))
+    }
+
+    process {
+        if ($EmailCustomer -and (-not $PSBoundParameters.ContainsKey('CustomerEmailTemplateId'))) {
+            throw 'CustomerEmailTemplateId is required when EmailCustomer is specified'
+        }
+
+        if ($PSBoundParameters.ContainsKey('AttachmentId')) {
+            $Attachments = [System.Collections.ArrayList]::new()
+
+            foreach ($AID in $AttachmentId) {
+                $EmbeddedAttachment = @{
+                    ExistingAttachmentId = $AID
+                }
+
+                [void]$Attachments.Add($EmbeddedAttachment)
+            }
+        }
+
+        $uri = BuildNewURI -Segments $Segments
+
+        $Body = [hashtable]@{
+            CloseStatusId = $CloseStatusId
+            AffectedTickets  = ,$TicketId
+            Solution      = $Solution
+            MarkPrivate   = $MarkPrivate.ToBool()
+            EmailCustomer = $EmailCustomer.ToBool()
+        }
+
+        if ($PSBoundParameters.ContainsKey('Notes')) {
+            $Body['Notes'] = $Notes
+        }
+
+        if ($EmailCustomer) {
+            $Body['EmailOptions'] = @{
+                CustomerEmailTemplateId = $CustomerEmailTemplateId
+                ReviewCustomerEmail = $false
+                NotifyOwner = $false
+            }
+        }
+
+        if ($PSBoundParameters.ContainsKey('AttachmentId')) {
+            $Body['Attachments'] = $Attachments
+        }
+
+        $paramInvokeVivantioRequest = @{
+            Method = 'POST'
+            Body   = $Body
+            Uri    = $uri
+        }
+
+        InvokeVivantioRequest @paramInvokeVivantioRequest
+    }
+
+    end {
+
+    }
+}
+
+#endregion
+
 #region File Connect-VivantioAPI.ps1
 
 
@@ -448,7 +548,7 @@ function Connect-VivantioAPI {
 
         [ValidateNotNullOrEmpty()]
         [ValidateRange(1, 900)]
-        [uint16]$TimeoutSeconds = 30
+        [uint16]$TimeoutSeconds = (Get-VivantioAPITimeout)
     )
 
     if (-not $Credential) {
@@ -897,6 +997,163 @@ function Get-VivantioODataURIScheme {
 
 #endregion
 
+#region File Get-VivantioRPCAttachment.ps1
+
+
+function Get-VivantioRPCAttachment {
+    <#
+    .SYNOPSIS
+        Downloads a Vivantio file attachment
+
+    .DESCRIPTION
+        Download a file attachment to file by attachment AttachmentGuid
+
+    .PARAMETER AttachmentGuid
+        The AttachmentGuid of the attachment
+
+    .PARAMETER OutputPath
+        The full path to write the file. Default is the current directory and file name from Vivantio
+
+    .PARAMETER Raw
+        Return the raw data from the request
+
+    .EXAMPLE
+        PS C:\> Get-VivantioRPCAttachment -AttachmentGuid "a677c710-e131-4944-90ab-aa1c5083d917" -OutputPath "C:\temp\attachment.txt"
+
+    .LINK
+        https://webservices-na01.vivantio.com/Help/Api/POST-api-File-AttachmentDownload
+
+    .LINK
+        https://webservices-na01.vivantio.com/Help/ResourceModel?modelName=AttachmentDownloadResponse
+
+#>
+
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [ValidateNotNullOrEmpty()]
+        [Alias('UniqueId')]
+        [guid]$AttachmentGuid,
+
+        [Parameter()]
+        [ValidateNotNullOrEmpty()]
+        [string]$OutputPath,
+
+        [switch]$Raw
+    )
+
+    begin {
+        $Segments = [System.Collections.ArrayList]::new(@('File', 'AttachmentDownload'))
+    }
+
+    process {
+        $uri = BuildNewURI -Segments $Segments
+
+        $Body = [pscustomobject]@{
+            AttachmentGuid = $AttachmentGuid.Guid
+        }
+
+        $paramInvokeVivantioRequest = @{
+            Raw    = $Raw
+            Method = 'POST'
+            Body   = $Body
+            Uri    = $uri
+        }
+
+        $result = InvokeVivantioRequest @paramInvokeVivantioRequest
+
+        if ($Raw) {
+            return $result
+        } elseif ($result.Successful -eq $true) {
+            if (-not $OutputPath) {
+                $OutputPath = Join-Path -Path $PWD -ChildPath $result.FileName
+            }
+
+            [System.IO.File]::WriteAllBytes($OutputPath, [System.Convert]::FromBase64String($result.Content))
+            Get-Item -Path $OutputPath
+        } else {
+            throw $result.ErrorMessages
+        }
+    }
+
+    end {
+
+    }
+}
+
+#endregion
+
+#region File Get-VivantioRPCAttachmentByParent.ps1
+
+
+function Get-VivantioRPCAttachmentByParent {
+<#
+    .SYNOPSIS
+        Get a Vivantio file attachment information
+
+    .DESCRIPTION
+        Get a file attachment information by the parent ID and area
+
+    .PARAMETER ParentId
+        The database ID of the ticket
+
+    .PARAMETER ParentArea
+        The area of the parent object. Valid values are 'Article', 'Asset', 'Caller', 'Client', 'Location', 'Ticket'. Default is 'Ticket'
+
+    .PARAMETER Raw
+        Return the raw data from the request
+
+    .EXAMPLE
+        PS C:\> Get-VivantioRPCAttachmentByParent -ParentId 12345 -ParentArea 'Ticket'
+
+    .LINK
+        https://webservices-na01.vivantio.com/Help/Api/POST-api-File-AttachmentSelectByParent_parentId_parentArea
+
+    .LINK
+        https://webservices-na01.vivantio.com/Help/ResourceModel?modelName=SelectResponseOfAttachment
+#>
+
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [uint64[]]$ParentId,
+
+        [Parameter()]
+        [ValidateSet('Article', 'Asset', 'Caller', 'Client', 'Location', 'Ticket', IgnoreCase = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$ParentArea = 'Ticket',
+
+        [switch]$Raw
+    )
+
+    begin {
+        $Segments = [System.Collections.ArrayList]::new(@('File', 'AttachmentSelectByParent'))
+    }
+
+    process {
+        $paramInvokeVivantioRequest = @{
+            Raw    = $Raw
+            Method = 'POST'
+        }
+
+        $paramInvokeVivantioRequest['Uri'] = BuildNewURI -Segments $Segments -Parameters @{
+            ParentId   = $ParentId
+            ParentArea = $ParentArea
+        }
+
+        InvokeVivantioRequest @paramInvokeVivantioRequest
+    }
+
+    end {
+
+    }
+}
+
+#endregion
+
 #region File Get-VivantioRPCCaller.ps1
 
 
@@ -1245,6 +1502,42 @@ function Get-VivantioRPCCustomFormInstance {
                 break
             }
         }
+    }
+
+    end {
+
+    }
+}
+
+#endregion
+
+#region File Get-VivantioRPCCustomFormTypesByParent.ps1
+
+function Get-VivantioRPCCustomFormTypesByParent {
+  [CmdletBinding(DefaultParameterSetName = 'ById')]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [uint64]$ParentId,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('Client', 'Location', 'Caller', 'Ticket', 'Asset', 'Article', IgnoreCase = $true)]
+        [string]$SystemArea,
+
+        [switch]$Raw
+    )
+
+    begin {
+        $Segments = [System.Collections.ArrayList]::new(@('Entity', 'SelectEntityTypeIdsByParentItem'))
+    }
+
+    process {
+        $uri = BuildNewURI -Segments $Segments
+
+        InvokeVivantioRequest -URI $uri -Body @{
+            'ParentId'   = $ParentId
+            'SystemArea' = $SystemArea
+        } -Method POST -Raw:$Raw
     }
 
     end {
@@ -3014,7 +3307,7 @@ function VerifyRPCConnectivity {
 
 #endregion
 
-<#	
+<#
 	===========================================================================
 	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2022 v5.8.206
 	 Created on:   	2022-06-16 2:03 PM
@@ -3034,6 +3327,7 @@ $script:CommonParameterNames = New-Object System.Collections.ArrayList
 [void]$script:CommonParameterNames.Add('Raw')
 
 SetupVivantioConfigVariable
+Set-VivantioAPITimeout -TimeoutSeconds 60
 
 #Export-ModuleMember -Function '*-*'
 
