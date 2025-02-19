@@ -44,7 +44,7 @@ function Connect-VivantioAPI {
 
         [ValidateNotNullOrEmpty()]
         [ValidateRange(1, 900)]
-        [uint16]$TimeoutSeconds = 30
+        [uint16]$TimeoutSeconds = (Get-VivantioAPITimeout)
     )
 
     if (-not $Credential) {
